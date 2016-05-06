@@ -2,6 +2,10 @@
 
 import rospy
 from smach import State, StateMachine
+from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import Twist
+from ford_project.msg import haptic_msg
+from std_msgs.msg import Char
 
 class Idle(State):
     def __init__(self):
@@ -45,7 +49,10 @@ class Respond(State):
 
 
 if __name__ == "__main__":
+    # init the node
     rospy.init_node("simple_follower")
+
+    # define subscribers and publishers
 
     sm = StateMachine()
 
@@ -59,7 +66,7 @@ if __name__ == "__main__":
                          transitions={ "send_success": "WAIT_CMD",
                                        "send_failed": "SEND_FB" })
         StateMachine.add("WAIT_CMD", Wait_CMD(),
-                         transitions={ "wait_too_long": "SEND_FB",
+                         transitions={ "wait_too_long": "RESPOND",
                                        "cmd_received": "RESPOND" })
         StateMachine.add("RESPOND", Respond(),
                          transitions={ "success": "FOLLOWING",
