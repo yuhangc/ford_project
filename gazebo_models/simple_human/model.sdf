@@ -1,0 +1,170 @@
+<?xml version='1.0'?>
+<sdf version='1.4'>
+  <model name="simple_human">
+  	<static>true</static>
+  	
+  		<link name='body'>
+            <pose>0 0 1.2 0 0 0</pose>
+
+            <collision name='collision'>
+              <geometry>
+                <box>
+                  <size>.4 .2 .6</size>
+                </box>
+              </geometry>
+            </collision>
+
+            <visual name='visual'>
+              <geometry>
+                <box>
+                  <size>.4 .2 .6</size>
+                </box>
+              </geometry>
+              <material>
+          		<script>
+            		<uri>file://media/materials/scripts/gazebo.material</uri>
+            		<name>Gazebo/Yellow</name>
+          		</script>
+        	  </material>
+            </visual>
+          </link>
+
+		<link name='right_leg'>
+            <pose>0.1 0 0.45 0 0 0</pose>
+
+            <collision name='collision'>
+              <geometry>
+                <cylinder>
+                  <radius>.1</radius>
+                  <length>.9</length>
+                </cylinder>
+              </geometry>
+            </collision>
+
+            <visual name='visual'>
+              <geometry>
+                <cylinder>
+                  <radius>.1</radius>
+                  <length>.9</length>
+                </cylinder>
+              </geometry>
+              <material>
+          		<script>
+            		<uri>file://media/materials/scripts/gazebo.material</uri>
+            		<name>Gazebo/Yellow</name>
+          		</script>
+        	  </material>
+            </visual>
+          </link>
+          
+        <link name='left_leg'>
+            <pose>-0.1 0 0.45 0 0 0</pose>
+
+            <collision name='collision'>
+              <geometry>
+                <cylinder>
+                  <radius>.1</radius>
+                  <length>.9</length>
+                </cylinder>
+              </geometry>
+            </collision>
+
+            <visual name='visual'>
+              <geometry>
+                <cylinder>
+                  <radius>.1</radius>
+                  <length>.9</length>
+                </cylinder>
+              </geometry>
+              <material>
+          		<script>
+            		<uri>file://media/materials/scripts/gazebo.material</uri>
+            		<name>Gazebo/Yellow</name>
+          		</script>
+        	  </material>
+            </visual>
+          </link>
+		
+		<link name='right_arm'>
+            <pose>.24 0 1.2 0 0 0</pose>
+
+            <collision name='collision'>
+              <geometry>
+                <cylinder>
+                  <radius>.08</radius>
+                  <length>.6</length>
+                </cylinder>
+              </geometry>
+            </collision>
+
+            <visual name='visual'>
+              <geometry>
+                <cylinder>
+                  <radius>.08</radius>
+                  <length>.6</length>
+                </cylinder>
+              </geometry>
+              <material>
+          		<script>
+            		<uri>file://media/materials/scripts/gazebo.material</uri>
+            		<name>Gazebo/Yellow</name>
+          		</script>
+        	  </material>
+            </visual>
+          </link>
+        
+        <link name='left_arm'>
+            <pose>-0.24 0 1.2 0 0 0</pose>
+
+            <collision name='collision'>
+              <geometry>
+                <cylinder>
+                  <radius>.08</radius>
+                  <length>.6</length>
+                </cylinder>
+              </geometry>
+            </collision>
+
+            <visual name='visual'>
+              <geometry>
+                <cylinder>
+                  <radius>.08</radius>
+                  <length>.6</length>
+                </cylinder>
+              </geometry>
+              <material>
+          		<script>
+            		<uri>file://media/materials/scripts/gazebo.material</uri>
+            		<name>Gazebo/Yellow</name>
+          		</script>
+        	  </material>
+            </visual>
+          </link>
+        
+        <link name='head'>
+            <pose>0 0 1.65 0 0 0</pose>
+
+            <collision name='collision'>
+              <geometry>
+                <sphere>
+                  <radius>.15</radius>
+                </sphere>
+              </geometry>
+            </collision>
+
+            <visual name='visual'>
+              <geometry>
+                <sphere>
+                  <radius>.15</radius>
+                </sphere>
+              </geometry>
+              <material>
+          		<script>
+            		<uri>file://media/materials/scripts/gazebo.material</uri>
+            		<name>Gazebo/Yellow</name>
+          		</script>
+        	  </material>
+            </visual>
+          </link>
+  </model>
+</sdf>
