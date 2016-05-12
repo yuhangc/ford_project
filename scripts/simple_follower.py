@@ -1,75 +1,34 @@
 #!/usr/bin/env python
 
 import rospy
-from smach import State, StateMachine
-from geometry_msgs.msg import PoseWithCovarianceStamped
+import numpy
 from geometry_msgs.msg import Twist
-from ford_project.msg import haptic_msg
-from std_msgs.msg import Char
+from geometry_msgs.msg import Pose2D
 
-class Idle(State):
-    def __init__(self):
-        State.__init__(self, outcomes=["start_following"])
+# a global variable for desired distance
+ddist = 1.0
+kp = 1.0
 
-    def execute(self, ud):
-        # do nothing
-        return
 
-class Following(State):
-    def __init__(self):
-        State.__init__(self, outcomes=["following_failed", "stop_following"])
+def human_track_cb(msg):
+    d = numpy.sqrt(msg.x**2 + msg.y**2)
+    delta = d - ddist
 
-    def execute(self, ud):
-        # do nothing
-        return
+    cmd_vel = Twist()
+    cmd_vel.linear.x = kp * delta
+    cmd_vel.angular.z = -2 * kp * msg.x / d
 
-class Send_FB(State):
-    def __init__(self):
-        State.__init__(self, outcomes=["send_success", "send_failed"])
-
-    def execute(self, ud):
-        # do nothing
-        return
-
-class Wait_CMD(State):
-    def __init__(self):
-        State.__init__(self, outcomes=["wait_too_long", "cmd_received"])
-
-    def execute(self, ud):
-        # do nothing
-        return
-
-class Respond(State):
-    def __init__(self):
-        State.__init__(self, outcomes=["success", "failed"])
-
-    def execute(self, ud):
-        # do nothing
-        return
+    print msg
+    print cmd_vel
+    # publish the velocity
+    vel_pub.publish(cmd_vel)
 
 
 if __name__ == "__main__":
-    # init the node
     rospy.init_node("simple_follower")
+    pos_sub = rospy.Subscriber("human_pos2d", Pose2D, human_track_cb)
+    vel_pub = rospy.Publisher("cmd_vel_mux/input/teleop", Twist, queue_size=1)
 
-    # define subscribers and publishers
-
-    sm = StateMachine()
-
-    with sm:
-        StateMachine.add("IDLE", Idle(),
-                         transitions={ "start_following": "FOLLOWING" })
-        StateMachine.add("FOLLOWING", Following(),
-                         transitions={ "following_failed": "SEND_FB",
-                                       "stop_following": "IDLE" })
-        StateMachine.add("SEND_FB", Send_FB(),
-                         transitions={ "send_success": "WAIT_CMD",
-                                       "send_failed": "SEND_FB" })
-        StateMachine.add("WAIT_CMD", Wait_CMD(),
-                         transitions={ "wait_too_long": "RESPOND",
-                                       "cmd_received": "RESPOND" })
-        StateMachine.add("RESPOND", Respond(),
-                         transitions={ "success": "FOLLOWING",
-                                       "failed": "SEND_FB" })
-
-    sm.execute()
+    rate = rospy.Rate(20)
+    while not rospy.is_shutdown():
+        rate.sleep()

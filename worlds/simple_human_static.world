@@ -1,4 +1,4 @@
-<sdf version='1.5'>
+<sdf version='1.4'>
   <world name='default'>
     <light name='sun' type='directional'>
       <cast_shadows>1</cast_shadows>
@@ -30,10 +30,10 @@
                 <mu2>50</mu2>
               </ode>
             </friction>
+            <bounce/>
             <contact>
               <ode/>
             </contact>
-            <bounce/>
           </surface>
           <max_contacts>10</max_contacts>
         </collision>
@@ -52,17 +52,20 @@
             </script>
           </material>
         </visual>
+        <velocity_decay>
+          <linear>0</linear>
+          <angular>0</angular>
+        </velocity_decay>
         <self_collide>0</self_collide>
         <kinematic>0</kinematic>
         <gravity>1</gravity>
       </link>
     </model>
-    <physics name='default_physics' default='0' type='ode'>
+    <physics type='ode'>
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1</real_time_factor>
       <real_time_update_rate>1000</real_time_update_rate>
       <gravity>0 0 -9.8</gravity>
-      <magnetic_field>5.5645e-06 2.28758e-05 -4.23884e-05</magnetic_field>
     </physics>
     <scene>
       <ambient>0.4 0.4 0.4 1</ambient>
@@ -76,59 +79,6 @@
       <elevation>0</elevation>
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
-    <state world_name='default'>
-      <sim_time>1022 893000000</sim_time>
-      <real_time>36 981242195</real_time>
-      <wall_time>1463013959 338748729</wall_time>
-      <model name='ground_plane'>
-        <pose>0 0 0 0 -0 0</pose>
-        <link name='link'>
-          <pose>0 0 0 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-      </model>
-      <model name='simple_human'>
-        <pose>0 1.99568 0 0 -0 0</pose>
-        <link name='body'>
-          <pose>0 1.99568 1.2 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-        <link name='head'>
-          <pose>0 1.99568 1.65 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-        <link name='left_arm'>
-          <pose>-0.24 1.99568 1.2 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-        <link name='legs'>
-          <pose>0 1.99568 0.45 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-        <link name='right_arm'>
-          <pose>0.24 1.99568 1.2 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-      </model>
-    </state>
-    <gui fullscreen='0'>
-      <camera name='user_camera'>
-        <pose>2.79853 -2.68444 2.60555 0 0.419643 2.1682</pose>
-        <view_controller>orbit</view_controller>
-      </camera>
-    </gui>
     <model name='simple_human'>
       <static>1</static>
       <link name='body'>
@@ -141,13 +91,13 @@
           </geometry>
           <max_contacts>10</max_contacts>
           <surface>
-            <contact>
-              <ode/>
-            </contact>
             <bounce/>
             <friction>
               <ode/>
             </friction>
+            <contact>
+              <ode/>
+            </contact>
           </surface>
         </collision>
         <visual name='visual'>
@@ -163,6 +113,10 @@
             </script>
           </material>
         </visual>
+        <velocity_decay>
+          <linear>0</linear>
+          <angular>0</angular>
+        </velocity_decay>
         <self_collide>0</self_collide>
         <kinematic>0</kinematic>
         <gravity>1</gravity>
@@ -177,13 +131,13 @@
           </geometry>
           <max_contacts>10</max_contacts>
           <surface>
-            <contact>
-              <ode/>
-            </contact>
             <bounce/>
             <friction>
               <ode/>
             </friction>
+            <contact>
+              <ode/>
+            </contact>
           </surface>
         </collision>
         <visual name='visual'>
@@ -199,6 +153,10 @@
             </script>
           </material>
         </visual>
+        <velocity_decay>
+          <linear>0</linear>
+          <angular>0</angular>
+        </velocity_decay>
         <self_collide>0</self_collide>
         <kinematic>0</kinematic>
         <gravity>1</gravity>
@@ -214,13 +172,13 @@
           </geometry>
           <max_contacts>10</max_contacts>
           <surface>
-            <contact>
-              <ode/>
-            </contact>
             <bounce/>
             <friction>
               <ode/>
             </friction>
+            <contact>
+              <ode/>
+            </contact>
           </surface>
         </collision>
         <visual name='visual'>
@@ -237,6 +195,10 @@
             </script>
           </material>
         </visual>
+        <velocity_decay>
+          <linear>0</linear>
+          <angular>0</angular>
+        </velocity_decay>
         <self_collide>0</self_collide>
         <kinematic>0</kinematic>
         <gravity>1</gravity>
@@ -252,13 +214,13 @@
           </geometry>
           <max_contacts>10</max_contacts>
           <surface>
-            <contact>
-              <ode/>
-            </contact>
             <bounce/>
             <friction>
               <ode/>
             </friction>
+            <contact>
+              <ode/>
+            </contact>
           </surface>
         </collision>
         <visual name='visual'>
@@ -275,6 +237,10 @@
             </script>
           </material>
         </visual>
+        <velocity_decay>
+          <linear>0</linear>
+          <angular>0</angular>
+        </velocity_decay>
         <self_collide>0</self_collide>
         <kinematic>0</kinematic>
         <gravity>1</gravity>
@@ -289,13 +255,13 @@
           </geometry>
           <max_contacts>10</max_contacts>
           <surface>
-            <contact>
-              <ode/>
-            </contact>
             <bounce/>
             <friction>
               <ode/>
             </friction>
+            <contact>
+              <ode/>
+            </contact>
           </surface>
         </collision>
         <visual name='visual'>
@@ -311,11 +277,68 @@
             </script>
           </material>
         </visual>
+        <velocity_decay>
+          <linear>0</linear>
+          <angular>0</angular>
+        </velocity_decay>
         <self_collide>0</self_collide>
         <kinematic>0</kinematic>
         <gravity>1</gravity>
       </link>
-      <pose>0 1.45927 0 0 -0 0</pose>
+      <pose>0 1.53678 0 0 -0 0</pose>
     </model>
+    <state world_name='default'>
+      <sim_time>31 958000000</sim_time>
+      <real_time>32 111848326</real_time>
+      <wall_time>1463092788 183298748</wall_time>
+      <model name='ground_plane'>
+        <pose>0 0 0 0 -0 0</pose>
+        <link name='link'>
+          <pose>0 0 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='simple_human'>
+        <pose>0 1.53678 0 0 -0 0</pose>
+        <link name='body'>
+          <pose>0 1.53678 1.2 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+        <link name='head'>
+          <pose>0 1.53678 1.65 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+        <link name='left_arm'>
+          <pose>-0.24 1.53678 1.2 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+        <link name='legs'>
+          <pose>0 1.53678 0.45 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+        <link name='right_arm'>
+          <pose>0.24 1.53678 1.2 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+    </state>
+    <gui fullscreen='0'>
+      <camera name='user_camera'>
+        <pose>5.60935 -9.06701 4.70676 3.02329e-17 0.407643 2.2122</pose>
+        <view_controller>orbit</view_controller>
+      </camera>
+    </gui>
   </world>
 </sdf>
