@@ -76,7 +76,60 @@
       <elevation>0</elevation>
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
-    <model name='simple_human_0'>
+    <state world_name='default'>
+      <sim_time>1022 893000000</sim_time>
+      <real_time>36 981242195</real_time>
+      <wall_time>1463013959 338748729</wall_time>
+      <model name='ground_plane'>
+        <pose>0 0 0 0 -0 0</pose>
+        <link name='link'>
+          <pose>0 0 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='simple_human'>
+        <pose>0 1.99568 0 0 -0 0</pose>
+        <link name='body'>
+          <pose>0 1.99568 1.2 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+        <link name='head'>
+          <pose>0 1.99568 1.65 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+        <link name='left_arm'>
+          <pose>-0.24 1.99568 1.2 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+        <link name='legs'>
+          <pose>0 1.99568 0.45 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+        <link name='right_arm'>
+          <pose>0.24 1.99568 1.2 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+    </state>
+    <gui fullscreen='0'>
+      <camera name='user_camera'>
+        <pose>2.79853 -2.68444 2.60555 0 0.419643 2.1682</pose>
+        <view_controller>orbit</view_controller>
+      </camera>
+    </gui>
+    <model name='simple_human'>
       <static>1</static>
       <link name='body'>
         <pose>0 0 1.2 0 -0 0</pose>
@@ -114,14 +167,13 @@
         <kinematic>0</kinematic>
         <gravity>1</gravity>
       </link>
-      <link name='right_leg'>
-        <pose>0.1 0 0.45 0 -0 0</pose>
+      <link name='legs'>
+        <pose>0 0 0.45 0 -0 0</pose>
         <collision name='collision'>
           <geometry>
-            <cylinder>
-              <radius>0.1</radius>
-              <length>0.9</length>
-            </cylinder>
+            <box>
+              <size>0.36 0.18 0.9</size>
+            </box>
           </geometry>
           <max_contacts>10</max_contacts>
           <surface>
@@ -136,48 +188,9 @@
         </collision>
         <visual name='visual'>
           <geometry>
-            <cylinder>
-              <radius>0.1</radius>
-              <length>0.9</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <script>
-              <uri>file://media/materials/scripts/gazebo.material</uri>
-              <name>Gazebo/Yellow</name>
-            </script>
-          </material>
-        </visual>
-        <self_collide>0</self_collide>
-        <kinematic>0</kinematic>
-        <gravity>1</gravity>
-      </link>
-      <link name='left_leg'>
-        <pose>-0.1 0 0.45 0 -0 0</pose>
-        <collision name='collision'>
-          <geometry>
-            <cylinder>
-              <radius>0.1</radius>
-              <length>0.9</length>
-            </cylinder>
-          </geometry>
-          <max_contacts>10</max_contacts>
-          <surface>
-            <contact>
-              <ode/>
-            </contact>
-            <bounce/>
-            <friction>
-              <ode/>
-            </friction>
-          </surface>
-        </collision>
-        <visual name='visual'>
-          <geometry>
-            <cylinder>
-              <radius>0.1</radius>
-              <length>0.9</length>
-            </cylinder>
+            <box>
+              <size>0.36 0.18 0.9</size>
+            </box>
           </geometry>
           <material>
             <script>
@@ -302,66 +315,7 @@
         <kinematic>0</kinematic>
         <gravity>1</gravity>
       </link>
-      <pose>0 0 0 0 -0 0</pose>
+      <pose>0 1.45927 0 0 -0 0</pose>
     </model>
-    <state world_name='default'>
-      <sim_time>986 99000000</sim_time>
-      <real_time>37 238920549</real_time>
-      <wall_time>1462927240 621581244</wall_time>
-      <model name='ground_plane'>
-        <pose>0 0 0 0 -0 0</pose>
-        <link name='link'>
-          <pose>0 0 0 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-      </model>
-      <model name='simple_human_0'>
-        <pose>0 2.08265 0 0 -0 0</pose>
-        <link name='body'>
-          <pose>0 2.08265 1.2 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-        <link name='head'>
-          <pose>0 2.08265 1.65 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-        <link name='left_arm'>
-          <pose>-0.24 2.08265 1.2 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-        <link name='left_leg'>
-          <pose>-0.1 2.08265 0.45 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-        <link name='right_arm'>
-          <pose>0.24 2.08265 1.2 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-        <link name='right_leg'>
-          <pose>0.1 2.08265 0.45 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-      </model>
-    </state>
-    <gui fullscreen='0'>
-      <camera name='user_camera'>
-        <pose>4.23398 -7.90175 6.50402 3.24312e-17 0.543643 2.0842</pose>
-        <view_controller>orbit</view_controller>
-      </camera>
-    </gui>
   </world>
 </sdf>
