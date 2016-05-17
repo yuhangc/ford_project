@@ -3,9 +3,9 @@
 import rospy
 import numpy
 from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose2D
 from gazebo_msgs.msg import ModelState
 from gazebo_msgs.srv import SetModelState
-# from gazebo_msgs.msg import ModelStates
 
 
 def fetch_param(name, default):
@@ -16,51 +16,100 @@ def fetch_param(name, default):
     return default
 
 
-if __name__ == "__main__":
-    rospy.init_node("simple_human_animation")
-    # state_sub = rospy.Subscriber("gazebo/set_model_state", ModelStates, human_track_cb)
-    traj_pub = rospy.Publisher("gazebo/set_model_state", ModelState, queue_size=1)
-    set_state_client = rospy.ServiceProxy("/gazebo/set_model_state", SetModelState)
+class HumanAnimation:
+    def __init__(self, file_name):
+        # initialize lists
+        self.way_points = []
+        self.type = []
+        self.duration = []
 
-    # fetch initial state or use default
-    init_state_default = ModelState()
-    init_state_default.pose.position = (0, 1.53678, 0)
-    init_state_default.pose.orientation = (0, 0, 0, 1)
-    init_state_default.twist.linear = (0, 0, 0)
-    init_state_default.twist.angular = (0, 0, 0)
+        # open file
+        f = open("../human_traj/" + file_name, "r+")
 
-    init_state = fetch_param("~init_state_human", init_state_default)
-    R = fetch_param("~traj_radius", 5)
-    omega = fetch_param("~traj_rate", 0.1)
+        # read in and parse the trajectory file
+        self.num_points = 0
+        for line in f:
+            pos_data = line.split(',')
 
-    # move along a circle with radius R
-    center_x = init_state.pose.position[0] + R
-    center_y = init_state.pose.position[1]
+            pose_new = Pose2D()
+            pose_new.x = float(pos_data[0])
+            pose_new.y = float(pos_data[1])
+            pose_new.theta = float(pos_data[2])
+            self.way_points.append(pose_new)
 
-    rospy.sleep(1.0)
-    rate = rospy.Rate(20)
-    t_init = rospy.get_time()
-    
-    while not rospy.is_shutdown():
-        t_now = rospy.get_time() - t_init
-        theta = omega * t_now
+            if self.num_points > 0:
+                # also read in segment type and duration
+                self.type.append(pos_data[3][1])
+                self.duration.append(float(pos_data[4]))
 
-        # calculate new pose
+            self.num_points += 1
+        self.num_points -= 1
+
+        # set model state client
+        self.set_state_client = rospy.ServiceProxy("/gazebo/set_model_state", SetModelState)
+
+        # initialize variables for update method
+        self.t_start = 0.0
+        self.id = 0
+
+    def update(self):
+        # initialize t_start
+        if self.t_start == 0:
+            self.t_start = rospy.get_time()
+
+        # return if run out of segments
+        if self.id >= self.num_points:
+            return
+
+        # check if enters next segment
+        t_now = rospy.get_time() - self.t_start
+        if t_now > self.duration[self.id]:
+            self.t_start += self.duration[self.id]
+            t_now -= self.duration[self.id]
+            self.id += 1
+
+        # return if run out of segments
+        if self.id >= self.num_points:
+            return
+
+        # interpolate to get current pose
+        pose_desired = Pose2D()
+        pos1 = self.way_points[self.id]
+        pos2 = self.way_points[self.id+1]
+        if self.type[self.id] == 'L':
+            pose_desired.x = pos1.x + t_now/self.duration[self.id]*(pos2.x-pos1.x)
+            pose_desired.y = pos1.y + t_now/self.duration[self.id]*(pos2.y-pos1.y)
+            pose_desired.theta = pos1.theta + t_now/self.duration[self.id]*(pos2.theta-pos1.theta)
+        else:
+            r = (pos1.x - pos2.x)/(numpy.cos(pos2.theta) - numpy.cos(pos1.theta))
+            pose_desired.theta = pos1.theta + t_now/self.duration[self.id]*(pos2.theta-pos1.theta)
+            pose_desired.x = pos1.x + r * (numpy.cos(pos1.theta) - numpy.cos(pose_desired.theta))
+            pose_desired.y = pos1.y + r * (numpy.sin(pos1.theta) - numpy.sin(pose_desired.theta))
+
+        # set and publish new state
+        new_pose = Pose()
+        new_pose.position.x = pose_desired.x
+        new_pose.position.y = pose_desired.y
+        new_pose.orientation.z = numpy.sin(pose_desired.theta / 2.0)
+        new_pose.orientation.w = numpy.cos(pose_desired.theta / 2.0)
+
         new_state = ModelState()
         new_state.model_name = "simple_human"
         new_state.reference_frame = "world"
+        new_state.pose = new_pose
 
-        new_pos = Pose()
-        new_pos.position.x = center_x - R*numpy.cos(theta)
-        new_pos.position.y = center_y + center_y + R * numpy.sin(theta)
-        new_pos.orientation.z = -numpy.sin(theta/2.0)
-        new_pos.orientation.w = numpy.cos(theta/2.0)
+        print t_now, self.id, self.num_points, pos1.theta, pose_desired.theta
+        print new_state.pose
 
-        new_state.pose = new_pos
+        self.set_state_client.call(new_state)
 
-        # print new_state
 
-        # publish the new pose
-        # traj_pub.publish(new_state)
-        set_state_client.call(new_state)
+if __name__ == "__main__":
+    rospy.init_node("simple_human_animation")
+
+    animation = HumanAnimation("traj1")
+
+    rate = rospy.Rate(20)
+    while not rospy.is_shutdown():
+        animation.update()
         rate.sleep()
