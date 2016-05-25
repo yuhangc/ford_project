@@ -5,6 +5,7 @@ import cv2, cv_bridge, numpy
 # import matplotlib.pyplot as plt
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Pose2D
+from std_msgs.msg import String
 
 
 class SimpleHumanTracker:
@@ -19,19 +20,22 @@ class SimpleHumanTracker:
                                               Image, self.rgb_image_callback)
         self.depth_image_sub = rospy.Subscriber("camera/depth/image_raw",
                                                 Image, self.depth_image_callback)
-        self.pos2d_pub = rospy.Publisher("human_pos2d", Pose2D, queue_size=1)
+        self.pos2d_pub = rospy.Publisher("tracking/human_pos2d", Pose2D, queue_size=1)
+        self.status_pub = rospy.Publisher("tracking/status", String, queue_size=1)
 
         # initialize variables
         self.width = 640
         self.height = 480
         self.fov = 57 * 3.1415926 / 180
         self.search_width = 20
+        self.range_lost_th = 10
 
         self.rgb_image = numpy.zeros((self.height, self.width, 3), numpy.uint8)
         self.depth_image = numpy.zeros((self.height, self.width), numpy.float32)
         self.mask = numpy.zeros((self.height, self.width), numpy.uint8)
 
         self.pos2d = Pose2D()
+        self.status = "Lost"
 
     # rgb image callback
     def rgb_image_callback(self, msg):
@@ -62,7 +66,8 @@ class SimpleHumanTracker:
 
         # apply mask to the depth sensor data
         self.depth_image = self.depth_image * self.mask / 255
-        avg_depth = self.depth_image[(self.height/2 - self.search_width):(self.height/2 + self.search_width), 0:self.width].mean(axis=0)
+        avg_depth = self.depth_image[(self.height/2 - self.search_width):(self.height/2 +
+                                                                          self.search_width), 0:self.width].mean(axis=0)
         x = numpy.linspace(0, self.width-1, num=self.width)
 
         # correct the x coordinate based on FOV and depth
@@ -80,6 +85,15 @@ class SimpleHumanTracker:
             if numpy.isfinite(avg_depth[i]) and avg_depth[i] > 0:
                 right = i
                 break
+
+        # return and report lost if the range is too small
+        if right - left < self.range_lost_th:
+            self.status = "Lost"
+            self.pos2d_pub.publish(self.pos2d)
+            self.status_pub.publish(self.status)
+            return
+
+        self.status = "Find"
 
         # moving average smoothing and find minimum
         d_min = 1e6
@@ -119,6 +133,7 @@ class SimpleHumanTracker:
 
         # publish the pos2d
         self.pos2d_pub.publish(self.pos2d)
+        self.status_pub.publish(self.status)
         # print self.pos2d
 
         # plt.plot(x, avg_depth, linestyle=':')

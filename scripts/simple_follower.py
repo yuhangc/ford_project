@@ -12,7 +12,7 @@ class SimpleFollower:
         self.kp = 1.0
 
         # publishers and subscribers
-        self.pos_sub = rospy.Subscriber("human_pos2d", Pose2D, self.human_track_cb)
+        self.pos_sub = rospy.Subscriber("tracking/human_pos2d", Pose2D, self.human_track_cb)
         self.vel_pub = rospy.Publisher("cmd_vel_mux/input/teleop", Twist, queue_size=1)
 
     def human_track_cb(self, msg):
