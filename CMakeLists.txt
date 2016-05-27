@@ -57,7 +57,10 @@ catkin_package(
 include_directories(
     include/ford_project
     external/Arduino
+    external/Sensoray826
     ${catkin_INCLUDE_DIRS})
+
+link_directories(external/Sensoray826)
 
 # set source code and headers
 set(IMU_MANAGER_SOURCES
@@ -70,8 +73,15 @@ set(IMU_MANAGER_HEADERS
     external/Arduino/CArduinoDevice.h
 )
 
+set(HAPTIC_SOURCES
+    src/haptic_test.cpp
+)
+
 ## Declare a C++ executable
 add_executable(imu_manager ${IMU_MANAGER_SOURCES} ${IMU_MANAGER_HEADERS})
 target_link_libraries(imu_manager ${catkin_LIBRARIES})
+
+add_executable(haptic_test ${HAPTIC_SOURCES})
+target_link_libraries(haptic_test ${catkin_LIBRARIES} 826_64)
 ## Add cmake target dependencies of the executable
 # add_dependencies(ford_project_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
