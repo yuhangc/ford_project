@@ -1,6 +1,5 @@
 #include "ros/ros.h"
 #include "geometry_msgs/Vector3.h"
-#include "sensor_msgs/Imu.h"
 #include "std_msgs/Bool.h"
 
 #include "CArduinoDevice.h"
@@ -22,17 +21,17 @@ private:
     ros::NodeHandle nh;
 
     // subscriber and publisher
-    ros::Publisher raw_data_pub;
-    ros::Publisher button_pub;
-    ros::Publisher rot_pub;
+    ros::Publisher acc_data_pub;
+    ros::Publisher gyro_data_pub;
+    ros::Publisher meg_data_pub;
 
     // arduino device
     CArduinoDevice* arduino;
 
-    // raw data and orientation
-    sensor_msgs::Imu imu_raw;
-    geometry_msgs::Vector3 rot_raw;
-    geometry_msgs::Vector3 rot_filtered;
+    // raw data
+    geometry_msgs::Vector3 acc_data;
+    geometry_msgs::Vector3 gyro_data;
+    geometry_msgs::Vector3 meg_data;
 
     std_msgs::Bool button_val;
 };

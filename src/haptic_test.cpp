@@ -4,6 +4,7 @@
 
 #include "826api.h"
 #include "ros/ros.h"
+#include "std_msgs/Char.h"
 
 ////////// DEFINES //////////
 #define COUNTER		CNTR_0A		// Counter A (and implicitly, B) channel to use.
@@ -27,6 +28,11 @@ int errcode     = S826_ERR_OK;
 
 // sine wave frequency
 double freq = 50.0;
+
+// control variables
+char dir = 'm';
+double tStep = 0.007;
+double tRamp = 0.018;
 
 // error handle macro
 #define X826(FUNC)   if ((errcode = FUNC) != S826_ERR_OK) { printf("\nERROR: %d\n", errcode); return errcode;}
@@ -75,11 +81,20 @@ int InitSensoray()
     return 0;
 }
 
+// callback function for direction setting
+void dirCallback(const std_msgs::Char::ConstPtr& msg)
+{
+    dir = msg->data;
+    ROS_INFO("Direction set to: %c", dir);
+}
+
 int main(int argc, char** argv)
 {
     // initialize node
     ros::init(argc, argv, "haptic_test_node");
     ros::NodeHandle nh;
+
+    ros::Subscriber dir_sub = nh.subscribe("haptic_dir", 1000, dirCallback);
 
     // initialize the sensoray board
     InitSensoray();
@@ -89,11 +104,40 @@ int main(int argc, char** argv)
     // "haptic" loop for controlling motor
     double t_start = ros::Time::now().toSec();
 
+    // state for asymmetric vibration
+    int vib_state = 0; // 0 for slow ramp, 1 for fast step
+
     ros::Rate rate(1000);
     while (ros::ok())
     {
+        double amp = 0.00;
         double t_now = ros::Time::now().toSec() - t_start;
-        double amp = std::sin(2.0 * pi * freq * t_now);
+
+        if (vib_state == 0) {
+            if (t_now > tRamp) {
+                vib_state = 1;
+                t_start = ros::Time::now().toSec();
+            } else {
+                amp = 2 * t_now / tRamp - 1.0;
+                if (dir == 'l') {
+                    amp = -amp;
+                }
+            }
+        } else {
+            if (t_now > tStep) {
+                vib_state = 0;
+                t_start = ros::Time::now().toSec();
+            } else {
+                amp = 1;
+                if (dir == 'r') {
+                    amp = -amp;
+                }
+            }
+        }
+
+        if (dir == 'm') {
+            amp = 0;
+        }
 
         uint dacval = (uint)(DAC_VSCALAR + DAC_VSCALAR * amp / 5.0);
         X826( S826_DacDataWrite(board, ao1, dacval, 0) );
