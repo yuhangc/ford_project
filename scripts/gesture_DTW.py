@@ -89,6 +89,10 @@ class GestureDTW:
             self.gesture_matching()
 
             if self.flag_gesture:
+                # publish the gesture
+                self.gesture_pub.publish(self.gesture_id)
+
+                # reset the flag
                 self.flag_gesture = False
 
                 # switch to not detect state
