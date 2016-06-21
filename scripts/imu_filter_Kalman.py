@@ -110,7 +110,7 @@ class OrientationEstimator:
         print roll*180/np.pi, pitch*180/np.pi, yaw*180/np.pi
 
         # convert to quaternion
-        self.q = transformations.quaternion_from_euler(roll, pitch, yaw)
+        self.q = transformations.quaternion_from_euler(roll, pitch, yaw, axes='rxyz')
         self.Sigma = np.vstack([np.hstack([(Ts/2.0)**2 * self.sigma_g**2 * np.eye(4), np.zeros((4, 3))]),
                                 np.hstack([np.zeros((3, 4)), self.sigma_b**2 * Ts**2 * np.eye(3)])])
 
