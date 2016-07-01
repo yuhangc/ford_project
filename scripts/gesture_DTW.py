@@ -10,7 +10,7 @@ from std_msgs.msg import Int8
 
 
 class GestureDTW:
-    def __init__(self, data_file_path):
+    def __init__(self):
         # load data file
         self.num_gestures = 5
         self.max_window_size = 45
@@ -20,6 +20,8 @@ class GestureDTW:
         self.rej_corr = [1.5, 1.5, 1.5, 1.5]
         self.dtw_window = 5
 
+        # obtain data file path through parameter
+        data_file_path = rospy.get_param("~gesture_data_path", "../gesture_data")
         self.__load_data__(data_file_path)
 
         # acceleration data input
@@ -48,7 +50,7 @@ class GestureDTW:
         self.num_gestures = 4
 
         # open and read the threshold file
-        data_file = open(data_file_path + "rejection_threshold.txt", 'r')
+        data_file = open(data_file_path + "/rejection_threshold.txt", 'r')
         for g in range(0, self.num_gestures):
             thresh_data = data_file.readline()
             self.rej_thresh.append(float(thresh_data))
@@ -58,7 +60,7 @@ class GestureDTW:
 
         # load the gesture template files
         for g in range(0, self.num_gestures):
-            data_file = open(data_file_path + "temp_gesture" + str(g) + ".txt", 'r')
+            data_file = open(data_file_path + "/temp_gesture" + str(g) + ".txt", 'r')
             data_all = data_file.readlines()
 
             temp = np.zeros((len(data_all), 3), dtype=np.float32)
@@ -143,16 +145,16 @@ class GestureDTW:
             else:
                 self.flag_gesture = True
 
-        # print gesture_score
         # find the best match
         if self.flag_gesture:
             self.gesture_id = gesture_score.index(min(gesture_score))
-            print self.gesture_id
+            # print self.gesture_id
+            self.gesture_pub.publish(self.gesture_id)
 
 if __name__ == "__main__":
     # initialize node and a gesture recognition object
-    rospy.init_node("gesture_recognition")
-    gesture_rec = GestureDTW(data_file_path="../gesture_data/")
+    rospy.init_node("gesture_detector")
+    gesture_rec = GestureDTW()
 
     # loop rate 50Hz
     rate = rospy.Rate(50)

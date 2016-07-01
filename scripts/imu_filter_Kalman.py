@@ -5,7 +5,7 @@ import numpy as np
 from tf import transformations
 
 from geometry_msgs.msg import Vector3
-from sensor_msgs.msg import Imu
+from geometry_msgs.msg import Quaternion
 
 # some global constants
 Ts = 0.02
@@ -21,7 +21,7 @@ class OrientationEstimator:
         self.mag_data = Vector3()
 
         # filtered data
-        self.imu_filtered = Imu()
+        self.orientation_filtered = Quaternion()
 
         # flag that indicates whether data has been updated
         self.data_flag = 0x00
@@ -49,8 +49,8 @@ class OrientationEstimator:
         self.mag_data_sub = rospy.Subscriber("human_input/mag_raw",
                                              Vector3, self.mag_data_callback)
 
-        self.imu_data_pub = rospy.Publisher("human_input/orientation",
-                                            Imu, queue_size=1)
+        self.orientation_pub = rospy.Publisher("human_input/tilt",
+                                               Quaternion, queue_size=1)
 
     def gyro_data_callback(self, msg):
         self.gyro_data = msg
@@ -166,18 +166,17 @@ class OrientationEstimator:
         self.Sigma = (np.eye(7) - Kt.dot(Ht)).dot(Sigma_bar)
 
         # update imu data and publish
-        self.imu_filtered.orientation.x = self.q[0]
-        self.imu_filtered.orientation.y = self.q[1]
-        self.imu_filtered.orientation.z = self.q[2]
-        self.imu_filtered.orientation.w = self.q[3]
-
-        self.imu_filtered.linear_acceleration = self.acc_data
-        self.imu_filtered.angular_velocity = self.gyro_data
+        self.orientation_filtered.x = self.q[0]
+        self.orientation_filtered.y = self.q[1]
+        self.orientation_filtered.z = self.q[2]
+        self.orientation_filtered.w = self.q[3]
 
         # print filtered orientation
-
         euler = transformations.euler_from_quaternion(self.q, axes='sxyz')
         print euler[0]/np.pi*180, euler[1]/np.pi*180, euler[2]/np.pi*180
+
+        # publish the filtered orientation
+        self.orientation_pub.publish(self.orientation_filtered)
 
 
 if __name__ == "__main__":
