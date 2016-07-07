@@ -2,6 +2,7 @@
 
 import rospy
 import numpy as np
+import cv2
 
 from tf import transformations
 
@@ -18,7 +19,7 @@ states_all = {0: "Idle",
               1: "Follow",
               2: "LostVision",
               3: "GetStuck",
-              4: "Teleop"}      # teleop state is only for testing
+              4: "Teleop"}  # teleop state is only for testing
 
 cmd_states_all = {0: "Idle",
                   1: "SendOnce",
@@ -35,6 +36,8 @@ gesture_dict = {0: "forward",
 
 class SimpleFollower:
     def __init__(self):
+        # cv2.namedWindow("status", 1)
+
         # state for the state machine
         self.state = "Idle"
         self.cmd_state = "Idle"
@@ -42,6 +45,9 @@ class SimpleFollower:
         # timer for state machine
         self.cmd_state_timer = rospy.get_time()
         self.cmd_state_period = 0.0
+
+        # loop counter
+        self.loop_count = 0
 
         # desired velocity for publish
         self.cmd_vel = Twist()
@@ -51,24 +57,24 @@ class SimpleFollower:
         self.track_status = "Lost"
 
         # human input variables
-        self.human_input_tilt = np.array([0.0, 0.0, 0.0])    # roll, pitch, yaw
-        self.human_input_gesture = -1               # 10 means no gesture input
-        self.human_input_mode = "gesture_control"
+        self.human_input_tilt = np.array([0.0, 0.0, 0.0])  # roll, pitch, yaw
+        self.human_input_gesture = -1  # 10 means no gesture input
+        self.human_input_mode = "tilt_control"
 
         # state machine control
-        self.set_state = -1     # < 0 means no set state command
+        self.set_state = -1  # < 0 means no set state command
         self.set_cmd_state = -1
 
         # variables for follower control
-        self.dist_desired = 1.0
+        self.dist_desired = 3.0
         self.kp_follower = 1.0
 
         self.dist_range_min = 0.5
-        self.dist_range_max = 3.0
+        self.dist_range_max = 5.0
 
         # variables for tilt control
-        self.pitch_to_linear_scale = 1.0
-        self.roll_to_angular_scale = -1.0
+        self.pitch_to_linear_scale = -1.0
+        self.roll_to_angular_scale = 1.0
         self.pitch_deadband = 0.3
         self.roll_deadband = 0.3
         self.pitch_offset = 0.2
@@ -114,7 +120,7 @@ class SimpleFollower:
         self.human_input_gesture = msg.data
 
     def human_input_mode_cb(self, msg):
-            self.human_input_mode = input_mode_all[msg.data]
+        self.human_input_mode = input_mode_all[msg.data]
 
     def set_state_cb(self, msg):
         self.set_state = msg.data
@@ -163,7 +169,7 @@ class SimpleFollower:
                 rospy.logwarn("Cannot start following! Human not found!")
             else:
                 # set to state follow
-                self.state = "Following"
+                self.state = "Follow"
         elif self.set_state == 4:
             # directly to go state teleop
             self.state = "Teleop"
@@ -174,13 +180,14 @@ class SimpleFollower:
             # set robot to stop and go to state lost vision
             self.send_vel_cmd(0, 0)
             self.state = "LostVision"
+            rospy.logwarn("Lost vision of human!")
             return
 
         self.check_set_state()
 
         # calculate desired velocity to follow
         d = np.sqrt(self.human_pose.x ** 2 + self.human_pose.y ** 2)
-        vx = self.kp_follower * (self.dist_desired - d)
+        vx = -self.kp_follower * (self.dist_desired - d)
         omg = -2.0 * self.kp_follower * self.human_pose.x / d
 
         self.send_vel_cmd(vx, omg)
@@ -188,7 +195,7 @@ class SimpleFollower:
     def lost_vision(self):
         # check if regains sight, and in proper range
         if self.track_status == "Find":
-            d = np.sqrt(self.human_pose.x **2 + self.human_pose.y ** 2)
+            d = np.sqrt(self.human_pose.x ** 2 + self.human_pose.y ** 2)
             if self.dist_range_min < d < self.dist_range_max:
                 # go back to following
                 self.state = "Follow"
@@ -201,6 +208,7 @@ class SimpleFollower:
         # right now just wait for start follow signal
         if self.set_state == 1:
             if self.track_status == "Find":
+                rospy.logwarn('Prepare to switch to follow')
                 d = np.sqrt(self.human_pose.x ** 2 + self.human_pose.y ** 2)
                 if self.dist_range_min < d < self.dist_range_max:
                     self.set_state = -1
@@ -210,7 +218,8 @@ class SimpleFollower:
         self.teleop()
 
     def teleop(self):
-        rospy.loginfo("in teleoperation")
+        # rospy.loginfo("in teleoperation")
+        self.check_set_state()
         if self.human_input_mode == "gesture_control":
             if self.human_input_gesture < 0:
                 gesture = "do_nothing"
@@ -218,9 +227,9 @@ class SimpleFollower:
                 gesture = gesture_dict[self.human_input_gesture]
 
             if gesture == "forward":
-                self.send_vel_cmd(0.5, 0, 0.5)
-            elif gesture == "backward":
                 self.send_vel_cmd(-0.5, 0, 0.5)
+            elif gesture == "backward":
+                self.send_vel_cmd(0.5, 0, 0.5)
             elif gesture == "turn_cw":
                 self.send_vel_cmd(0, -0.5, 0.5)
             elif gesture == "turn_ccw":
@@ -245,9 +254,24 @@ class SimpleFollower:
                 vx = 0
 
             self.send_vel_cmd(vx, omg)
-            rospy.loginfo("cmd_vel_sent!")
+            # rospy.loginfo("cmd_vel_sent!")
 
     def update(self):
+        # update loop counter
+        self.loop_count += 1
+        if self.loop_count == 10:
+            # rospy.logwarn("display image!")
+            img = np.zeros((128, 128, 3), np.uint8)
+            if self.state == "Idle":
+                cv2.circle(img, (64, 64), 63, (0, 200, 200), -1)
+            elif self.state == "Follow":
+                cv2.circle(img, (64, 64), 63, (0, 200, 0), -1)
+            elif self.state == "LostVision":
+                cv2.circle(img, (64, 64), 63, (0, 0, 200), -1)
+            cv2.imshow("status", img)
+            cv2.waitKey(3)
+            self.loop_count = 0
+
         # run over states
         if self.state == "Idle":
             self.idle()

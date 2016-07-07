@@ -20,6 +20,9 @@ class OrientationEstimator:
         self.acc_data = Vector3()
         self.mag_data = Vector3()
 
+        # mode: on/off
+        self.filter_mode = "off"
+
         # filtered data
         self.orientation_filtered = Quaternion()
 
@@ -123,57 +126,70 @@ class OrientationEstimator:
         acc = np.array([self.acc_data.x, self.acc_data.y, self.acc_data.z])
         mag = np.array([self.mag_data.x, self.mag_data.y, -self.mag_data.z])
 
-        # parameters for process update
-        omg_t = omg - self.b
-        Omega = 0.5 * np.vstack([np.hstack([- self.cross_mat(omg_t), omg_t.reshape(3, 1)]),
-                                  np.hstack([-omg_t, 0])])
-        Xi = np.vstack([self.q[3] * np.eye(3) - self.cross_mat(self.q[0:3]), -self.q[0:3]])
-        Gt = np.vstack([np.hstack([np.eye(4) + Ts * Omega, -Ts/2.0 * Xi]),
-                        np.hstack([np.zeros((3, 4)), np.eye(3)])])
-        Rt = np.vstack([np.hstack([(Ts/2.0)**2 * self.sigma_g**2 * Xi.dot(Xi.T), np.zeros((4, 3))]),
-                        np.hstack([np.zeros((3, 4)), self.sigma_b**2 * Ts**2 * np.eye(3)])])
+        if self.filter_mode == "on":
+            # parameters for process update
+            omg_t = omg - self.b
+            Omega = 0.5 * np.vstack([np.hstack([- self.cross_mat(omg_t), omg_t.reshape(3, 1)]),
+                                      np.hstack([-omg_t, 0])])
+            Xi = np.vstack([self.q[3] * np.eye(3) - self.cross_mat(self.q[0:3]), -self.q[0:3]])
+            Gt = np.vstack([np.hstack([np.eye(4) + Ts * Omega, -Ts/2.0 * Xi]),
+                            np.hstack([np.zeros((3, 4)), np.eye(3)])])
+            Rt = np.vstack([np.hstack([(Ts/2.0)**2 * self.sigma_g**2 * Xi.dot(Xi.T), np.zeros((4, 3))]),
+                            np.hstack([np.zeros((3, 4)), self.sigma_b**2 * Ts**2 * np.eye(3)])])
 
-        # process update
-        q_bar = (np.eye(4) + Ts * Omega).dot(self.q)
-        b_bar = self.b
-        Sigma_bar = Gt.dot(self.Sigma.dot(Gt.T)) + Rt
+            # process update
+            q_bar = (np.eye(4) + Ts * Omega).dot(self.q)
+            b_bar = self.b
+            Sigma_bar = Gt.dot(self.Sigma.dot(Gt.T)) + Rt
 
-        # parameters for measurement update
-        qx = self.cross_mat(self.q[0:3])
-        gx = self.cross_mat(g0)
-        hx = self.cross_mat(h0)
+            # parameters for measurement update
+            qx = self.cross_mat(self.q[0:3])
+            gx = self.cross_mat(g0)
+            hx = self.cross_mat(h0)
 
-        Rq = np.eye(3) - 2 * self.q[3] * qx + 2 * qx.dot(qx)
-        hz = np.hstack([Rq.dot(g0), Rq.dot(h0)])
+            Rq = np.eye(3) - 2 * self.q[3] * qx + 2 * qx.dot(qx)
+            hz = np.hstack([Rq.dot(g0), Rq.dot(h0)])
 
-        # print hz
-        # print np.hstack([acc, mag])
+            # print hz
+            # print np.hstack([acc, mag])
 
-        dq_a = np.hstack([2 * self.q[3] * gx + 2 * (gx.dot(qx) - 2 * qx.dot(gx)), -2 * (qx.dot(g0)).reshape(3, 1)])
-        dq_h = np.hstack([2 * self.q[3] * hx + 2 * (hx.dot(qx) - 2 * qx.dot(hx)), -2 * (qx.dot(h0)).reshape(3, 1)])
-        Ht = np.vstack([np.hstack([dq_a, np.zeros((3, 3))]),
-                        np.hstack([dq_h, np.zeros((3, 3))])])
+            dq_a = np.hstack([2 * self.q[3] * gx + 2 * (gx.dot(qx) - 2 * qx.dot(gx)), -2 * (qx.dot(g0)).reshape(3, 1)])
+            dq_h = np.hstack([2 * self.q[3] * hx + 2 * (hx.dot(qx) - 2 * qx.dot(hx)), -2 * (qx.dot(h0)).reshape(3, 1)])
+            Ht = np.vstack([np.hstack([dq_a, np.zeros((3, 3))]),
+                            np.hstack([dq_h, np.zeros((3, 3))])])
 
-        # kalman gain
-        # Kt = np.linalg.solve(Ht.dot(Sigma_bar.dot(Ht.T)) + self.Qt, Ht.dot(Sigma_bar.T))
-        # Kt = Kt.T
-        Kt = (Sigma_bar.dot(Ht.T)).dot(np.linalg.inv(Ht.dot(Sigma_bar.dot(Ht.T)) + self.Qt))
+            # kalman gain
+            # Kt = np.linalg.solve(Ht.dot(Sigma_bar.dot(Ht.T)) + self.Qt, Ht.dot(Sigma_bar.T))
+            # Kt = Kt.T
+            Kt = (Sigma_bar.dot(Ht.T)).dot(np.linalg.inv(Ht.dot(Sigma_bar.dot(Ht.T)) + self.Qt))
 
-        # measurement update
-        x = np.hstack([q_bar, b_bar]) + Kt.dot(np.hstack([acc, mag]) - hz)
-        self.q = x[0:4] / np.linalg.norm(x[0:4])
-        self.b = x[4:7]
-        self.Sigma = (np.eye(7) - Kt.dot(Ht)).dot(Sigma_bar)
+            # measurement update
+            x = np.hstack([q_bar, b_bar]) + Kt.dot(np.hstack([acc, mag]) - hz)
+            self.q = x[0:4] / np.linalg.norm(x[0:4])
+            self.b = x[4:7]
+            self.Sigma = (np.eye(7) - Kt.dot(Ht)).dot(Sigma_bar)
 
-        # update imu data and publish
-        self.orientation_filtered.x = self.q[0]
-        self.orientation_filtered.y = self.q[1]
-        self.orientation_filtered.z = self.q[2]
-        self.orientation_filtered.w = self.q[3]
+            # update imu data and publish
+            self.orientation_filtered.x = self.q[0]
+            self.orientation_filtered.y = self.q[1]
+            self.orientation_filtered.z = self.q[2]
+            self.orientation_filtered.w = self.q[3]
 
-        # print filtered orientation
-        euler = transformations.euler_from_quaternion(self.q, axes='sxyz')
-        print euler[0]/np.pi*180, euler[1]/np.pi*180, euler[2]/np.pi*180
+            # print filtered orientation
+            # euler = transformations.euler_from_quaternion(self.q, axes='rxyz')
+            # print euler[0]/np.pi*180, euler[1]/np.pi*180, euler[2]/np.pi*180
+        else:
+            roll = np.arctan2(acc[1], acc[2])
+            pitch = np.arctan(-acc[0] / (acc[1] * np.sin(roll) + acc[2] * np.cos(roll)))
+            yaw = np.arctan2(mag[2] * np.sin(roll) - mag[1] * np.cos(roll),
+                             mag[0] * np.cos(pitch) + mag[1] * np.sin(pitch) +
+                             mag[2] * np.sin(pitch) * np.cos(roll))
+            print roll, pitch, yaw
+            q = transformations.quaternion_from_euler(roll, pitch, yaw, axes='rxyz')
+            self.orientation_filtered.x = q[0]
+            self.orientation_filtered.y = q[1]
+            self.orientation_filtered.z = q[2]
+            self.orientation_filtered.w = q[3]
 
         # publish the filtered orientation
         self.orientation_pub.publish(self.orientation_filtered)

@@ -8,6 +8,11 @@ from collections import deque
 from geometry_msgs.msg import Vector3
 from std_msgs.msg import Int8
 
+gesture_dict = {0: "backward",
+                1: "forward",
+                2: "turn_right/cw",
+                3: "turn_left/ccw"}
+
 
 class GestureDTW:
     def __init__(self):
@@ -145,10 +150,11 @@ class GestureDTW:
             else:
                 self.flag_gesture = True
 
+        # print gesture_score
         # find the best match
         if self.flag_gesture:
             self.gesture_id = gesture_score.index(min(gesture_score))
-            # print self.gesture_id
+            print gesture_dict[self.gesture_id]
             self.gesture_pub.publish(self.gesture_id)
 
 if __name__ == "__main__":

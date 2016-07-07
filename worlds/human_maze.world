@@ -1,0 +1,21 @@
+<?xml version="1.0" ?>
+<sdf version="1.4">
+  <world name="test_world">
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <include>
+      <uri>model://human_movable</uri>
+      <name>human_movable</name>
+      <pose>6.5 8.9895 0 0 0 3.14159265</pose>
+    </include>
+    <include>
+    	<uri>model://crazy_maze</uri>
+    	<name>crazy_maze</name>
+    	<pose>-0.1059 0.66352 0 0 0 0</pose>
+    </include>
+  </world>
+</sdf>

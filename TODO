@@ -1,0 +1,4 @@
+1. Collision detection OR obstacle detection?
+2. Integrate the 2D haptic device and write a haptic node?
+3. Reimplement gesture recognition in C++? Or faster gesture recognition algrithm
+4. Design a mechanical holder for the sensor OR integrate with the 2D haptic device.
