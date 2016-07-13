@@ -40,7 +40,7 @@
   <node pkg="ford_project" type="imu_manager" name="imu_manager"/>
   <node pkg="ford_project" type="vision_test.py" name="vision_tracker"/>
   <node pkg="ford_project" type="imu_filter_Kalman.py" name="tilt_filter"/>
-  <node pkg="ford_project" type="gesture_DTW.py" name="gesture_detector">
+  <node pkg="ford_project" type="gesture_DTW" name="gesture_detector">
   	<param name="gesture_data_path" value="$(find ford_project)/gesture_data"/>
   </node>
   <node pkg="ford_project" type="simple_follower.py" name="simple_follower"/>

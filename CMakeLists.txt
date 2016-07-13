@@ -7,7 +7,10 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   message_generation
+  cmake_modules
 )
+
+find_package(Eigen REQUIRED)
 
 # Generate messages in the 'msg' folder
 add_message_files(
@@ -43,8 +46,8 @@ catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES ford_project
 #  CATKIN_DEPENDS roscpp rospy std_msgs
-#  DEPENDS system_lib
-	CATKIN_DEPENDS message_runtime
+  CATKIN_DEPENDS message_runtime
+  DEPENDS Eigen
 )
 
 
@@ -58,11 +61,12 @@ include_directories(
     include/ford_project
     external/Arduino
     external/Sensoray826
-    ${catkin_INCLUDE_DIRS})
+    ${catkin_INCLUDE_DIRS}
+    ${Eigen_INCLUDE_DIRS})
 
 link_directories(external/Sensoray826)
 
-# set source code and headers
+# set sources code and headers for IMU manager
 set(IMU_MANAGER_SOURCES
     src/imu_manager.cpp
     external/Arduino/CArduinoDevice.cpp
@@ -73,8 +77,18 @@ set(IMU_MANAGER_HEADERS
     external/Arduino/CArduinoDevice.h
 )
 
+# set sources and headers for haptic thread
 set(HAPTIC_SOURCES
     src/haptic_test.cpp
+)
+
+# set sources and headers for gesture recognition thread
+set(GESTURE_SOURCES
+    src/gesture_DTW.cpp
+)
+
+set(GESTURE_HEADERS
+    include/ford_project/gesture_DTW.h
 )
 
 ## Declare a C++ executable
@@ -83,5 +97,9 @@ target_link_libraries(imu_manager ${catkin_LIBRARIES})
 
 add_executable(haptic_test ${HAPTIC_SOURCES})
 target_link_libraries(haptic_test ${catkin_LIBRARIES} 826_64)
+
+add_executable(gesture_DTW ${GESTURE_SOURCES} ${GESTURE_HEADERS})
+target_link_libraries(gesture_DTW ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
+
 ## Add cmake target dependencies of the executable
 # add_dependencies(ford_project_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

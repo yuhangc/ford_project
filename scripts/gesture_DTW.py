@@ -17,7 +17,7 @@ gesture_dict = {0: "backward",
 class GestureDTW:
     def __init__(self):
         # load data file
-        self.num_gestures = 5
+        self.num_gestures = 4
         self.max_window_size = 45
         self.gesture_temps = []
         self.gesture_len = []

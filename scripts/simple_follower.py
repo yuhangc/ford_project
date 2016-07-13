@@ -59,7 +59,8 @@ class SimpleFollower:
         # human input variables
         self.human_input_tilt = np.array([0.0, 0.0, 0.0])  # roll, pitch, yaw
         self.human_input_gesture = -1  # 10 means no gesture input
-        self.human_input_mode = "tilt_control"
+        # self.human_input_mode = "tilt_control"
+        self.human_input_mode = "gesture_control"
 
         # state machine control
         self.set_state = -1  # < 0 means no set state command
