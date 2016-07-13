@@ -13,9 +13,9 @@ GestureDTW::GestureDTW()
     this->gesture_pub = this->nh.advertise<std_msgs::Int8>("/human_input/gesture", 1);
 
     // initialize the "constants"
-    this->num_gestures = 4;
-    this->max_window_size = 45;
-    this->dtw_window = 5;
+    ros::param::param<int>("~num_gestures", this->num_gestures, 4);
+    ros::param::param<int>("~max_window_size", this->max_window_size, 45);
+    ros::param::param<int>("~dtw_window", this->dtw_window, 45);
 
     this->time_debounce = 0.5;
     this->time_gesture_start = 0;

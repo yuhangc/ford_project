@@ -38,9 +38,9 @@ class SimpleFollower:
     def __init__(self):
         # cv2.namedWindow("status", 1)
 
-        # state for the state machine
-        self.state = "Idle"
-        self.cmd_state = "Idle"
+        # set initial states
+        self.state = rospy.get_param("~state_init", "Idle")
+        self.cmd_state = rospy.get_param("~cmd_state_init", "Idle")
 
         # timer for state machine
         self.cmd_state_timer = rospy.get_time()
@@ -59,27 +59,27 @@ class SimpleFollower:
         # human input variables
         self.human_input_tilt = np.array([0.0, 0.0, 0.0])  # roll, pitch, yaw
         self.human_input_gesture = -1  # 10 means no gesture input
-        # self.human_input_mode = "tilt_control"
-        self.human_input_mode = "gesture_control"
+
+        self.human_input_mode = rospy.get_param("~human_input_mode", "tilt_control")
 
         # state machine control
         self.set_state = -1  # < 0 means no set state command
         self.set_cmd_state = -1
 
         # variables for follower control
-        self.dist_desired = 3.0
-        self.kp_follower = 1.0
+        self.dist_desired = rospy.get_param("~dist_desired_follower", 1.0)
+        self.kp_follower = rospy.get_param("~kp_follower", 1.0)
 
-        self.dist_range_min = 0.5
-        self.dist_range_max = 5.0
+        self.dist_range_min = rospy.get_param("~dist_range_min", 0.3)
+        self.dist_range_max = rospy.get_param("~dist_range_max", 5.0)
 
         # variables for tilt control
-        self.pitch_to_linear_scale = -1.0
-        self.roll_to_angular_scale = 1.0
-        self.pitch_deadband = 0.3
-        self.roll_deadband = 0.3
-        self.pitch_offset = 0.2
-        self.roll_offset = 0.2
+        self.pitch_to_linear_scale = rospy.get_param("~pitch_to_linear_scale", -1.0)
+        self.roll_to_angular_scale = rospy.get_param("~roll_to_angular_scale", 1.0)
+        self.pitch_deadband = rospy.get_param("~pitch_deadband", 0.3)
+        self.roll_deadband = rospy.get_param("~roll_deadband", 0.3)
+        self.pitch_offset = rospy.get_param("pitch_offset", 0.2)
+        self.roll_offset = rospy.get_param("roll_offset", 0.2)
 
         # subscribers to human tracking
         self.human_pose_sub = rospy.Subscriber("tracking/human_pos2d",

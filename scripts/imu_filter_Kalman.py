@@ -21,7 +21,7 @@ class OrientationEstimator:
         self.mag_data = Vector3()
 
         # mode: on/off
-        self.filter_mode = "off"
+        self.filter_mode = rospy.get_param("~filter_mode", "off")
 
         # filtered data
         self.orientation_filtered = Quaternion()
@@ -30,10 +30,10 @@ class OrientationEstimator:
         self.data_flag = 0x00
 
         # "load" covariances - currently just hard code
-        self.sigma_g = 0.4 * np.pi / 180.0
-        self.sigma_b = 0.1 * np.pi / 180.0
-        self.sigma_a = 0.0025
-        self.sigma_h = 0.005
+        self.sigma_g = rospy.get_param("~sigma_gyro", 0.4) * np.pi / 180.0
+        self.sigma_b = rospy.get_param("~sigma_bias", 0.1) * np.pi / 180.0
+        self.sigma_a = rospy.get_param("~sigma_acc", 0.0025)
+        self.sigma_h = rospy.get_param("~sigma_mag", 0.005)
 
         # initial conditions
         self.q = np.array([0, 0, 0, 1.0])

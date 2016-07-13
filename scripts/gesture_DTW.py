@@ -16,14 +16,15 @@ gesture_dict = {0: "backward",
 
 class GestureDTW:
     def __init__(self):
-        # load data file
-        self.num_gestures = 4
-        self.max_window_size = 45
+        # set parameters
+        self.num_gestures = rospy.get_param("~num_gestures", 4)
+        self.max_window_size = rospy.get_param("~max_window_size", 45)
+        self.dtw_window = rospy.get_param("~dtw_window", 5)
+
         self.gesture_temps = []
         self.gesture_len = []
         self.rej_thresh = []
-        self.rej_corr = [1.5, 1.5, 1.5, 1.5]
-        self.dtw_window = 5
+        self.rej_corr = [1.5, 1.5, 1.5, 1.5]    # should load from file
 
         # obtain data file path through parameter
         data_file_path = rospy.get_param("~gesture_data_path", "../gesture_data")

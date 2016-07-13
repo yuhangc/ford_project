@@ -3,6 +3,17 @@
   <include file="$(find turtlebot_bringup)/launch/3dsensor.launch"/>
   
   <!-- custom nodes for vision testing and following control -->
-  <node pkg="ford_project" type="vision_test.py" name="vision_tracker"/>
-  <node pkg="ford_project" type="simple_follower.py" name="simple_follower"/>
+  <node pkg="ford_project" type="vision_test.py" name="vision_tracker">
+  	<param name="search_width" type="int" value="30"/>
+  </node>
+  <node pkg="ford_project" type="simple_follower.py" name="simple_follower">
+  	<arg name="state_init" value="Idle"/>
+  	<arg name="human_input_mode" value="tilt_control"/>
+  	<arg name="dist_desired_follower" type="double" value="0.8"/>
+  	<arg name="kp_follower" type="double" value="1.0"/>
+  	<arg name="dist_range_min" type="double" value="0.3"/>
+  	<arg name="dist_range_max" type="double" value="3.0"/>
+  	<arg name="pitch_offset" type="double" value="0.1"/>
+  	<arg name="roll_offset" type="double" value="0.2"/>
+  </node>
 </launch>

@@ -26,9 +26,11 @@ class SimpleHumanTracker:
         # initialize variables
         self.width = 640
         self.height = 480
-        self.fov = 57 * 3.1415926 / 180
-        self.search_width = 20
-        self.range_lost_th = 10
+
+        # get parameters
+        self.fov = rospy.get_param("~field_of_view", 57) * 3.1415926 / 180
+        self.search_width = rospy.get_param("~search_width", 20)
+        self.range_lost_th = rospy.get_param("~range_lost_threshold", 10)
 
         self.rgb_image = numpy.zeros((self.height, self.width, 3), numpy.uint8)
         self.depth_image = numpy.zeros((self.height, self.width), numpy.float32)
@@ -143,10 +145,10 @@ class SimpleHumanTracker:
 
 if __name__ == "__main__":
     rospy.init_node('vision_test')
-    tracker1 = SimpleHumanTracker()
+    tracker = SimpleHumanTracker()
 
     rospy.sleep(1)
     rate = rospy.Rate(10)
     while not rospy.is_shutdown():
-        tracker1.process_image()
+        tracker.process_image()
         rate.sleep()
