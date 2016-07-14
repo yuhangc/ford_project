@@ -7,13 +7,13 @@
   	<param name="search_width" type="int" value="30"/>
   </node>
   <node pkg="ford_project" type="simple_follower.py" name="simple_follower">
-  	<arg name="state_init" value="Idle"/>
-  	<arg name="human_input_mode" value="tilt_control"/>
-  	<arg name="dist_desired_follower" type="double" value="0.8"/>
-  	<arg name="kp_follower" type="double" value="1.0"/>
-  	<arg name="dist_range_min" type="double" value="0.3"/>
-  	<arg name="dist_range_max" type="double" value="3.0"/>
-  	<arg name="pitch_offset" type="double" value="0.1"/>
-  	<arg name="roll_offset" type="double" value="0.2"/>
+  	<param name="state_init" value="Idle"/>
+  	<param name="human_input_mode" value="tilt_control"/>
+  	<param name="dist_desired_follower" type="double" value="0.8"/>
+  	<param name="kp_follower" type="double" value="1.0"/>
+  	<param name="dist_range_min" type="double" value="0.3"/>
+  	<param name="dist_range_max" type="double" value="3.0"/>
+  	<param name="pitch_offset" type="double" value="0.1"/>
+  	<param name="roll_offset" type="double" value="0.2"/>
   </node>
 </launch>
