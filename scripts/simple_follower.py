@@ -101,7 +101,7 @@ class SimpleFollower:
                                                       Int8, self.set_cmd_state_cb)
 
         # publisher to robot velocity
-        self.robot_vel_pub = rospy.Publisher("cmd_vel_mux/input/teleop",
+        self.robot_vel_pub = rospy.Publisher("cmd_vel",
                                              Twist, queue_size=1)
 
     # call back functions
@@ -310,7 +310,7 @@ if __name__ == "__main__":
     follower = SimpleFollower()
 
     # loop rate 100 Hz
-    rate = rospy.Rate(100)
+    rate = rospy.Rate(50)
     while not rospy.is_shutdown():
         follower.update()
         rate.sleep()
