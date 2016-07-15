@@ -310,7 +310,7 @@ if __name__ == "__main__":
     follower = SimpleFollower()
 
     # loop rate 100 Hz
-    rate = rospy.Rate(100)
+    rate = rospy.Rate(50)
     while not rospy.is_shutdown():
         follower.update()
         rate.sleep()
