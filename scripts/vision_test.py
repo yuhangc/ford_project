@@ -18,7 +18,7 @@ class SimpleHumanTracker:
         # initialize subscriber and publisher
         self.rgb_image_sub = rospy.Subscriber("camera/rgb/image_raw",
                                               Image, self.rgb_image_callback)
-        self.depth_image_sub = rospy.Subscriber("camera/depth/image_raw",
+        self.depth_image_sub = rospy.Subscriber("camera/depth_registered/image_raw",
                                                 Image, self.depth_image_callback)
         self.pos2d_pub = rospy.Publisher("tracking/human_pos2d", Pose2D, queue_size=1)
         self.status_pub = rospy.Publisher("tracking/status", String, queue_size=1)
@@ -50,7 +50,7 @@ class SimpleHumanTracker:
 
         # threshold image
         self.mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
-        # res = cv2.bitwise_and(self.rgb_image, self.rgb_image, mask=mask)
+        # res = cv2.bitwise_and(self.rgb_image, self.rgb_image, mask=self.mask)
         # cv2.imshow("window", res)
         # cv2.waitKey(3)
 
@@ -67,7 +67,7 @@ class SimpleHumanTracker:
         self.mask[(self.height / 2 + self.search_width):self.height, 0:self.width] = 0
 
         # apply mask to the depth sensor data
-        self.depth_image = self.depth_image * self.mask / 255
+        self.depth_image = self.depth_image * self.mask / 255.0
         avg_depth = self.depth_image[(self.height/2 - self.search_width):(self.height/2 +
                                                                           self.search_width), 0:self.width].mean(axis=0)
         x = numpy.linspace(0, self.width-1, num=self.width)

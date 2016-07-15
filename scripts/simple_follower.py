@@ -101,7 +101,7 @@ class SimpleFollower:
                                                       Int8, self.set_cmd_state_cb)
 
         # publisher to robot velocity
-        self.robot_vel_pub = rospy.Publisher("cmd_vel_mux/input/teleop",
+        self.robot_vel_pub = rospy.Publisher("cmd_vel",
                                              Twist, queue_size=1)
 
     # call back functions
