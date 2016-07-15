@@ -179,7 +179,7 @@ class SimpleFollower:
         # check if need to switch state
         if self.track_status == "Lost":
             # set robot to stop and go to state lost vision
-            self.send_vel_cmd(0, 0)
+            self.send_vel_cmd(0, 0, 0.5)
             self.state = "LostVision"
             rospy.logwarn("Lost vision of human!")
             return
@@ -187,9 +187,8 @@ class SimpleFollower:
         self.check_set_state()
 
         # calculate desired velocity to follow
-        d = np.sqrt(self.human_pose.x ** 2 + self.human_pose.y ** 2)
-        vx = -self.kp_follower * (self.dist_desired - d)
-        omg = -2.0 * self.kp_follower * self.human_pose.x / d
+        vx = -self.kp_follower * (self.dist_desired - self.human_pose.y)
+        omg = -2.0 * self.kp_follower * self.human_pose.x / 100.0
 
         self.send_vel_cmd(vx, omg)
 

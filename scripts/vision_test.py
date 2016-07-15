@@ -97,7 +97,7 @@ class SimpleHumanTracker:
         # cv2.waitKey(3)
 
         # apply mask to the depth sensor data
-        self.depth_image *= (self.mask / 255)
+        self.depth_image = self.depth_image * (self.mask / 255)
         avg_depth = self.depth_image[(self.height/2 - self.search_width):(self.height/2 +
                                                                           self.search_width), 0:self.width].mean(axis=0)
         x = np.linspace(0, self.width-1, num=self.width)
@@ -133,7 +133,7 @@ class SimpleHumanTracker:
 
         self.pos2d.theta = np.arctan2(a[0], a[1])
         self.pos2d.x = np.mean(x[left:right])
-        self.pos2d.y = np.mean(avg_depth[left:right])
+        self.pos2d.y = np.mean(avg_depth[left:right]) / 1000.0
 
         # publish the pos2d
         self.pos2d_pub.publish(self.pos2d)
