@@ -82,6 +82,10 @@ set(HAPTIC_SOURCES
     src/haptic_test.cpp
 )
 
+set(HAPTIC_HEADERS
+    include/ford_project/haptic_test.h
+)
+
 # set sources and headers for gesture recognition thread
 set(GESTURE_SOURCES
     src/gesture_DTW.cpp
@@ -95,7 +99,7 @@ set(GESTURE_HEADERS
 add_executable(imu_manager ${IMU_MANAGER_SOURCES} ${IMU_MANAGER_HEADERS})
 target_link_libraries(imu_manager ${catkin_LIBRARIES})
 
-add_executable(haptic_test ${HAPTIC_SOURCES})
+add_executable(haptic_test ${HAPTIC_SOURCES} ${HAPTIC_HEADERS})
 target_link_libraries(haptic_test ${catkin_LIBRARIES} 826_64)
 
 add_executable(gesture_DTW ${GESTURE_SOURCES} ${GESTURE_HEADERS})

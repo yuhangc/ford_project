@@ -1,4 +1,6 @@
-Header header
-
 uint8 direction
-uint8 intensity
+float32 amplitude
+
+uint8 repetition
+float32 period_render
+float32 period_pause 
