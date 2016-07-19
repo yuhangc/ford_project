@@ -44,6 +44,7 @@ class SimpleHumanTracker:
         self.fov = rospy.get_param("~field_of_view", 57) * 3.1415926 / 180
         self.search_width = rospy.get_param("~search_width", 20)
         self.range_lost_th = rospy.get_param("~range_lost_threshold", 10)
+        self.depth_scale = rospy.get_param("~depth_scale", 1000.0)
 
         self.rgb_image = np.zeros((self.height, self.width, 3), np.uint8)
         self.depth_image = np.zeros((self.height, self.width), np.uint16)
@@ -133,7 +134,7 @@ class SimpleHumanTracker:
 
         self.pos2d.theta = np.arctan2(a[0], a[1])
         self.pos2d.x = np.mean(x[left:right])
-        self.pos2d.y = np.mean(avg_depth[left:right]) / 1000.0
+        self.pos2d.y = np.mean(avg_depth[left:right]) / self.depth_scale
 
         # publish the pos2d
         self.pos2d_pub.publish(self.pos2d)

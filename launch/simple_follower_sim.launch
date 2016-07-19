@@ -1,5 +1,5 @@
 <launch>
-  <arg name="world_file"  default="$(find ford_project)/worlds/human_maze.world"/>
+  <arg name="world_file"  default="$(find ford_project)/worlds/human_curb.world"/>
 
   <arg name="base"      value="$(optenv TURTLEBOT_BASE kobuki)"/> <!-- create, roomba -->
   <arg name="battery"   value="$(optenv TURTLEBOT_BATTERY /proc/acpi/battery/BAT0)"/>  <!-- /proc/acpi/battery/BAT0 --> 
@@ -41,7 +41,8 @@
   <node pkg="ford_project" type="vision_test.py" name="vision_tracker">
   	<param name="search_width" type="int" value="20"/>
   	<param name="rgb_image_source" value="camera/rgb/image_raw"/>
-  	<param name="depth_image_source" value="camera/depth_registered/image_raw"/>
+  	<param name="depth_image_source" value="camera/depth/image_raw"/>
+  	<param name="depth_scale" type="double" value="1"/>
   </node>
   <node pkg="ford_project" type="imu_filter_Kalman.py" name="tilt_filter">
   	<param name="filter_mode" value="off"/>
@@ -52,7 +53,7 @@
   <node pkg="ford_project" type="simple_follower.py" name="simple_follower">
   	<param name="state_init" value="Idle"/>
   	<param name="human_input_mode" value="tilt_control"/>
-  	<param name="dist_desired_follower" type="double" value="3.0"/>
+  	<param name="dist_desired_follower" type="double" value="2.0"/>
   	<param name="kp_follower" type="double" value="1.0"/>
   	<param name="dist_range_min" type="double" value="0.3"/>
   	<param name="dist_range_max" type="double" value="5.0"/>
@@ -62,7 +63,7 @@
   <node pkg="ford_project" type="velocity_smoother.py" name="velocity_smoother">
   	<param name="maximum_increment_linear" type="double" value="0.02"/>
   	<param name="maximum_increment_angular" type="double" value="0.05"/>
-  	<param name="velocity_cap_linear" type="double" value="1.0"/>
+  	<param name="velocity_cap_linear" type="double" value="2.0"/>
   	<param name="velocity_cap_angular" type="double" value="2.0"/>
   	<remap from="cmd_vel_smooth" to="cmd_vel_mux/input/teleop"/>
   </node>

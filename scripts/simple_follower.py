@@ -14,6 +14,7 @@ from ford_project.msg import haptic_msg
 from std_msgs.msg import String
 from std_msgs.msg import Int8
 from std_msgs.msg import Bool
+from nav_msgs.msg import Odometry
 
 states_all = {0: "Idle",
               1: "Follow",
@@ -46,11 +47,16 @@ class SimpleFollower:
         self.cmd_state_timer = rospy.get_time()
         self.cmd_state_period = 0.0
 
-        # loop counter
+        # loop counters
         self.loop_count = 0
+        self.stuck_count = 0
+
+        self.stuck_count_limit = rospy.get_param("~stuck_count_limit", 30)
+        self.vel_err_th = rospy.get_param("~velocity_error_threshold", 0.2)
 
         # desired velocity for publish
         self.cmd_vel = Twist()
+        self.measured_vel = Twist()
 
         # human tracking variables
         self.human_pose = Pose2D()
@@ -86,6 +92,8 @@ class SimpleFollower:
                                                Pose2D, self.human_track_pose_cb)
         self.track_status_sub = rospy.Subscriber("tracking/status",
                                                  String, self.human_track_status_cb)
+        self.odom_sub = rospy.Subscriber("odom",
+                                         Odometry, self.odom_cb)
         # subscribers to human input
         self.human_input_ort_sub = rospy.Subscriber("human_input/tilt",
                                                     Quaternion, self.human_input_tilt_cb)
@@ -132,6 +140,9 @@ class SimpleFollower:
         self.cmd_state = cmd_states_all[self.set_cmd_state]
         rospy.loginfo("set command state to %s", self.cmd_state)
 
+    def odom_cb(self, msg):
+        self.measured_vel = msg.twist.twist
+
     # utility functions
     def send_vel_cmd(self, vx, omg, T=0.0):
         # do nothing if state is not idle
@@ -165,6 +176,7 @@ class SimpleFollower:
     def idle(self):
         # check for start message
         if self.set_state == 1:
+            self.set_state = -1
             # check if already have human in vision
             if self.track_status == "Lost":
                 rospy.logwarn("Cannot start following! Human not found!")
@@ -183,6 +195,18 @@ class SimpleFollower:
             self.state = "LostVision"
             rospy.logwarn("Lost vision of human!")
             return
+
+        # check if get stuck
+        if np.abs(self.measured_vel.linear.x - self.cmd_vel.linear.x) > self.vel_err_th:
+            self.stuck_count += 1
+            if self.stuck_count >= self.stuck_count_limit:
+                self.stuck_count = 0
+                self.send_vel_cmd(0, 0, 0.5)
+                self.state = "GetStuck"
+                rospy.logwarn("Robot stuck!")
+                return
+        else:
+            self.stuck_count = 0
 
         self.check_set_state()
 
@@ -209,8 +233,7 @@ class SimpleFollower:
         if self.set_state == 1:
             if self.track_status == "Find":
                 rospy.logwarn('Prepare to switch to follow')
-                d = np.sqrt(self.human_pose.x ** 2 + self.human_pose.y ** 2)
-                if self.dist_range_min < d < self.dist_range_max:
+                if self.dist_range_min < self.human_pose.y < self.dist_range_max:
                     self.set_state = -1
                     self.state = "Follow"
 
@@ -268,6 +291,8 @@ class SimpleFollower:
                 cv2.circle(img, (64, 64), 63, (0, 200, 0), -1)
             elif self.state == "LostVision":
                 cv2.circle(img, (64, 64), 63, (0, 0, 200), -1)
+            elif self.state == "GetStuck":
+                cv2.circle(img, (64, 64), 63, (200, 0, 200), -1)
             cv2.imshow("status", img)
             cv2.waitKey(3)
             self.loop_count = 0
