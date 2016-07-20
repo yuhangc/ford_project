@@ -50,8 +50,10 @@ class SimpleFollower:
         # loop counters
         self.loop_count = 0
         self.stuck_count = 0
+        self.lost_vision_count = 0
 
-        self.stuck_count_limit = rospy.get_param("~stuck_count_limit", 30)
+        self.stuck_count_limit = rospy.get_param("~stuck_count_limit", 25)
+        self.lost_vision_count_limit = rospy.get_param("~lost_vision_count_limit", 25)
         self.vel_err_th = rospy.get_param("~velocity_error_threshold", 0.2)
 
         # desired velocity for publish
@@ -87,6 +89,10 @@ class SimpleFollower:
         self.pitch_offset = rospy.get_param("pitch_offset", 0.2)
         self.roll_offset = rospy.get_param("roll_offset", 0.2)
 
+        # haptic signal thresholds
+        self.haptic_dir_thresh = 30
+        self.haptic_amp_thresh = 2.5
+
         # subscribers to human tracking
         self.human_pose_sub = rospy.Subscriber("tracking/human_pos2d",
                                                Pose2D, self.human_track_pose_cb)
@@ -111,6 +117,8 @@ class SimpleFollower:
         # publisher to robot velocity
         self.robot_vel_pub = rospy.Publisher("cmd_vel",
                                              Twist, queue_size=1)
+        self.haptic_msg_pub = rospy.Publisher("haptic_control",
+                                              haptic_msg, queue_size=1)
 
     # call back functions
     def human_track_pose_cb(self, msg):
@@ -161,6 +169,26 @@ class SimpleFollower:
             self.cmd_state_timer = rospy.get_time()
             self.cmd_state = "SendPeriod"
 
+    def send_haptic_msg(self, rep, t_render, t_pause):
+        new_msg = haptic_msg()
+
+        # calcualte direction and amplitude based on human position
+        if self.human_pose.x < -self.haptic_dir_thresh:
+            new_msg.direction = 7   # backleft
+        elif self.human_pose.x > self.haptic_dir_thresh:
+            new_msg.direction = 6   # backright
+        else:
+            new_msg.direction = 3   # backward
+
+        new_msg.amplitude = self.human_pose.y / self.haptic_amp_thresh
+
+        # send haptic control message
+        new_msg.repetition = rep
+        new_msg.period_render = t_render
+        new_msg.period_pause = t_pause
+
+        self.haptic_msg_pub.publish(new_msg)
+
     def check_set_state(self):
         # check if state has been set to idle or teleop manually
         if self.set_state == 0:
@@ -190,16 +218,27 @@ class SimpleFollower:
     def follow(self):
         # check if need to switch state
         if self.track_status == "Lost":
-            # set robot to stop and go to state lost vision
-            self.send_vel_cmd(0, 0, 0.5)
-            self.state = "LostVision"
-            rospy.logwarn("Lost vision of human!")
-            return
+            self.lost_vision_count += 1
+            if self.lost_vision_count >= self.lost_vision_count_limit:
+                # send haptic signal
+                self.send_haptic_msg(3, 1.0, 1.0)
+
+                # set robot to stop and go to state lost vision
+                self.lost_vision_count = 0
+                self.send_vel_cmd(0, 0, 0.5)
+                self.state = "LostVision"
+                rospy.logwarn("Lost vision of human!")
+                return
+        else:
+            self.lost_vision_count = 0
 
         # check if get stuck
         if np.abs(self.measured_vel.linear.x - self.cmd_vel.linear.x) > self.vel_err_th:
             self.stuck_count += 1
             if self.stuck_count >= self.stuck_count_limit:
+                # send haptic signal
+                self.send_haptic_msg(3, 1.0, 1.0)
+
                 self.stuck_count = 0
                 self.send_vel_cmd(0, 0, 0.5)
                 self.state = "GetStuck"

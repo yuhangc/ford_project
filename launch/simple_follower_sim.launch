@@ -50,6 +50,8 @@
   <node pkg="ford_project" type="gesture_DTW" name="gesture_detector">
   	<param name="gesture_data_path" value="$(find ford_project)/gesture_data"/>
   </node>
+  <node pkg="ford_project" type="haptic_test" name="haptic_controller">
+  </node>
   <node pkg="ford_project" type="simple_follower.py" name="simple_follower">
   	<param name="state_init" value="Idle"/>
   	<param name="human_input_mode" value="tilt_control"/>

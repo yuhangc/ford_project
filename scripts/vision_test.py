@@ -3,7 +3,6 @@
 import rospy
 import cv2, cv_bridge
 import numpy as np
-# import matplotlib.pyplot as plt
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Pose2D
 from std_msgs.msg import String
@@ -140,10 +139,6 @@ class SimpleHumanTracker:
         self.pos2d_pub.publish(self.pos2d)
         self.status_pub.publish(self.status)
         # print self.pos2d
-
-        # plt.plot(x, avg_depth, linestyle=':')
-        # plt.scatter(x[x_min], avg_depth[x_min], color='red', s=2)
-        # plt.show()
 
 
 if __name__ == "__main__":
