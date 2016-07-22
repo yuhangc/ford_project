@@ -121,8 +121,8 @@ class SimpleHumanTracker:
         self.mask = np.zeros((self.height, self.width), np.uint8)
         cv2.drawContours(self.mask, cnts, idx, 255, -1)
 
-        cv2.imshow("window", self.mask)
-        cv2.waitKey(3)
+        # cv2.imshow("window", self.mask)
+        # cv2.waitKey(3)
 
         # calculate the center position of the blob
         M = cv2.moments(self.mask)
