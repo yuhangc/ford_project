@@ -41,9 +41,11 @@ class SimpleHumanTracker:
 
         # get parameters
         self.fov = rospy.get_param("~field_of_view", 57) * 3.1415926 / 180
-        self.search_width = rospy.get_param("~search_width", 20)
-        self.range_lost_th = rospy.get_param("~range_lost_threshold", 10)
+        self.range_lost_th = rospy.get_param("~range_lost_threshold", 10000)
         self.depth_scale = rospy.get_param("~depth_scale", 1000.0)
+        self.height_cap = rospy.get_param("~height_cap", 20)
+        self.width_cap = rospy.get_param("~width_cap", 10)
+        self.depth_cap_min = rospy.get_param("~depth_cap_min", 0.3)
 
         self.rgb_image = np.zeros((self.height, self.width, 3), np.uint8)
         self.depth_image = np.zeros((self.height, self.width), np.uint16)
@@ -89,6 +91,11 @@ class SimpleHumanTracker:
         self.mask = cv2.erode(self.mask, self.kernel_erosion, iterations=1)
         self.mask = cv2.morphologyEx(self.mask, cv2.MORPH_CLOSE, self.kernel_closing)
 
+        # cap the boarder of the mask to prevent noise
+        self.mask[0:self.height_cap, 0:self.width] = 0
+        self.mask[0:self.height, 0:self.width_cap] = 0
+        self.mask[0:self.height, (self.width - self.width_cap):self.width] = 0
+
         # find contours
         cnts, hierarchy = cv2.findContours(self.mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -124,6 +131,18 @@ class SimpleHumanTracker:
         # cv2.imshow("window", self.mask)
         # cv2.waitKey(3)
 
+        # calculate the average distance to the blob
+        avg_depth = cv2.mean(self.depth_image, self.mask)
+        avg_depth = avg_depth[0] / self.depth_scale
+        # print avg_depth
+
+        # if too close don't update since the depth sensor won't work
+        if avg_depth <= self.depth_cap_min:
+            self.status = "Lost"
+            self.pos2d_pub.publish(self.pos2d)
+            self.status_pub.publish(self.status)
+            return
+
         # calculate the center position of the blob
         M = cv2.moments(self.mask)
         if M['m00'] > 0:
@@ -131,13 +150,10 @@ class SimpleHumanTracker:
         else:
             cx = 0
 
-        # calculate the average distance to the blob
-        avg_depth = cv2.mean(self.depth_image, self.mask)
-
         self.status = "Find"
 
         self.pos2d.x = cx - self.width / 2.0
-        self.pos2d.y = avg_depth[0] / self.depth_scale
+        self.pos2d.y = avg_depth
 
         # publish the pos2d
         self.pos2d_pub.publish(self.pos2d)
