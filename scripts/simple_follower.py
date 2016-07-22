@@ -258,8 +258,7 @@ class SimpleFollower:
     def lost_vision(self):
         # check if regains sight, and in proper range
         if self.track_status == "Find":
-            d = np.sqrt(self.human_pose.x ** 2 + self.human_pose.y ** 2)
-            if self.dist_range_min < d < self.dist_range_max:
+            if self.dist_range_min < self.human_pose.y < self.dist_range_max:
                 # go back to following
                 self.state = "Follow"
 
