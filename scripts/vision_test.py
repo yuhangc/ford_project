@@ -85,55 +85,59 @@ class SimpleHumanTracker:
         self.flag_rgb_received = False
         self.flag_depth_received = False
 
-        # only search for points close to the center line
-        self.mask[0:(self.height / 2 - self.search_width), 0:self.width] = 0
-        self.mask[(self.height / 2 + self.search_width):self.height, 0:self.width] = 0
-
         # filter the mask with erosion and close filter
         self.mask = cv2.erode(self.mask, self.kernel_erosion, iterations=1)
         self.mask = cv2.morphologyEx(self.mask, cv2.MORPH_CLOSE, self.kernel_closing)
 
-        # cv2.imshow("window", self.mask)
-        # cv2.waitKey(3)
+        # find contours
+        cnts, hierarchy = cv2.findContours(self.mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        # apply mask to the depth sensor data
-        self.depth_image = self.depth_image * (self.mask / 255)
-        avg_depth = self.depth_image[(self.height/2 - self.search_width):(self.height/2 +
-                                                                          self.search_width), 0:self.width].mean(axis=0)
-        x = np.linspace(0, self.width-1, num=self.width)
-        x -= 0.5 * self.width
-
-        # find the range
-        left = 0
-        right = 0
-        for i in range(0, self.width-1):
-            if np.isfinite(avg_depth[i]) and avg_depth[i] > 0:
-                left = i
-                break
-        for i in range(self.width-1, 0, -1):
-            if np.isfinite(avg_depth[i]) and avg_depth[i] > 0:
-                right = i
-                break
-
-        # return and report lost if the range is too small
-        if right - left < self.range_lost_th:
+        # return if no contours found
+        if len(cnts) == 0:
             self.status = "Lost"
             self.pos2d_pub.publish(self.pos2d)
             self.status_pub.publish(self.status)
             return
 
+        # only use the largest contour
+        areas = np.zeros((1, len(cnts)))
+        idx = 0
+        for cnt in cnts:
+            areas[0, idx] = cv2.contourArea(cnt)
+            idx += 1
+
+        # find the max area
+        area = areas.max()
+        idx = areas.argmax()
+
+        # return and report lost if the range is too small
+        if area < self.range_lost_th:
+            self.status = "Lost"
+            self.pos2d_pub.publish(self.pos2d)
+            self.status_pub.publish(self.status)
+            return
+
+        # update the mask
+        self.mask = np.zeros((self.height, self.width), np.uint8)
+        cv2.drawContours(self.mask, cnts, idx, 255, -1)
+
+        cv2.imshow("window", self.mask)
+        cv2.waitKey(3)
+
+        # calculate the center position of the blob
+        M = cv2.moments(self.mask)
+        if M['m00'] > 0:
+            cx = int(M['m10'] / M['m00'])
+        else:
+            cx = 0
+
+        # calculate the average distance to the blob
+        avg_depth = cv2.mean(self.depth_image, self.mask)
+
         self.status = "Find"
 
-        # find orientation, assuming that the long edge is always visible
-        X = np.zeros((right-left, 2), np.float32)
-        b = np.ones((right-left, 1), np.float32)
-        X[:, 0] = x[left:right]
-        X[:, 1] = avg_depth[left:right]
-        a = np.dot(np.linalg.pinv(X), b)
-
-        self.pos2d.theta = np.arctan2(a[0], a[1])
-        self.pos2d.x = np.mean(x[left:right])
-        self.pos2d.y = np.mean(avg_depth[left:right]) / self.depth_scale
+        self.pos2d.x = cx
+        self.pos2d.y = avg_depth[0] / self.depth_scale
 
         # publish the pos2d
         self.pos2d_pub.publish(self.pos2d)
