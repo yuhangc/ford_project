@@ -127,7 +127,7 @@ class SimpleHumanTracker:
         # calculate the center position of the blob
         M = cv2.moments(self.mask)
         if M['m00'] > 0:
-            cx = int(M['m10'] / M['m00'])
+            cx = M['m10'] / M['m00']
         else:
             cx = 0
 
@@ -136,7 +136,7 @@ class SimpleHumanTracker:
 
         self.status = "Find"
 
-        self.pos2d.x = cx
+        self.pos2d.x = cx - self.width / 2.0
         self.pos2d.y = avg_depth[0] / self.depth_scale
 
         # publish the pos2d
