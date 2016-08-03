@@ -3,6 +3,8 @@
 import rospy
 import cv2, cv_bridge
 import numpy as np
+import matplotlib.pyplot as plt
+
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Pose2D
 from std_msgs.msg import String
@@ -46,6 +48,13 @@ class SimpleHumanTracker:
         self.height_cap = rospy.get_param("~height_cap", 20)
         self.width_cap = rospy.get_param("~width_cap", 10)
         self.depth_cap_min = rospy.get_param("~depth_cap_min", 0.3)
+
+        # "focal length"
+        self.fw = float(self.width) / 2.0 / np.tan(self.fov / 2.0)
+        self.fh = float(self.height) / 2.0 / np.tan(self.fov / 2.0)
+
+        # number of points for fitting
+        self.num_fitting_point = 100
 
         self.rgb_image = np.zeros((self.height, self.width, 3), np.uint8)
         self.depth_image = np.zeros((self.height, self.width), np.uint16)
@@ -152,8 +161,37 @@ class SimpleHumanTracker:
 
         self.status = "Find"
 
-        self.pos2d.x = cx - self.width / 2.0
+        self.pos2d.x = float(cx - self.width / 2) * avg_depth / self.fw
         self.pos2d.y = avg_depth
+
+        # find the orientation
+        row_start = max(int(M['m01'] / M['m00']) - 5, 0)
+        row_end = min(int(M['m01'] / M['m00']) + 5, self.height)
+
+        # find the non-zero points within the range
+        temp = self.mask[row_start:row_end, :]
+        nonzero_id = np.nonzero(self.mask[row_start:row_end, :])
+        num_nonzero = np.size(nonzero_id, 1)
+
+        # sample the non-zero points
+        sample_step = int(num_nonzero / self.num_fitting_point) + 1
+        sample_id = np.arange(0, num_nonzero, sample_step)
+
+        # xx = nonzero_id[0][sample_id]
+        # yy = nonzero_id[1][sample_id]
+        sample_depth = self.depth_image[(nonzero_id[0][sample_id] + row_start, nonzero_id[1][sample_id])]
+        sample_x = (nonzero_id[1][sample_id] - (self.width / 2)) * sample_depth / self.fw
+        num_sample = np.size(sample_x)
+
+        # plt.scatter(sample_x, sample_depth)
+
+        sample_x_t = np.transpose(sample_x)
+        # fit a line
+        X = np.vstack((sample_x, sample_depth))
+        b = np.ones((num_sample, 1), np.float32)
+        a = np.dot(np.linalg.pinv(X.transpose()), b)
+
+        self.pos2d.theta = np.arctan2(a[0], a[1]) * 180 / 3.14159
 
         # publish the pos2d
         self.pos2d_pub.publish(self.pos2d)
