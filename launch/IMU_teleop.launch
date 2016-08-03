@@ -1,0 +1,9 @@
+<launch>
+  <node pkg="ford_project" type="imu_manager" name="imu_manager"/>
+  <node pkg="ford_project" type="imu_filter_Kalman.py" name="tilt_filter">
+  	<param name="filter_mode" value="off"/>
+  </node>
+  <node pkg="ford_project" type="gesture_DTW" name="gesture_detector">
+  	<param name="gesture_data_path" value="$(find ford_project)/gesture_data"/>
+  </node>
+</launch>
