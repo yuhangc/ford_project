@@ -15,12 +15,13 @@
   	<param name="dist_range_max" type="double" value="3.0"/>
   	<param name="pitch_offset" type="double" value="0.1"/>
   	<param name="roll_offset" type="double" value="0.2"/>
+	<param name="stuck_count_limit" type="int" value="50"/>
   </node>
   <node pkg="ford_project" type="velocity_smoother.py" name="velocity_smoother">
   	<param name="maximum_increment_linear" type="double" value="0.01"/>
-  	<param name="maximum_increment_angular" type="double" value="0.02"/>
+  	<param name="maximum_increment_angular" type="double" value="0.05"/>
   	<param name="velocity_cap_linear" type="double" value="0.5"/>
-  	<param name="velocity_cap_angular" type="double" value="1.0"/>
+  	<param name="velocity_cap_angular" type="double" value="2.0"/>
   	<remap from="cmd_vel_smooth" to="cmd_vel_mux/input/teleop"/>
   </node>
 </launch>
