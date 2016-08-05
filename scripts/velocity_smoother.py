@@ -52,9 +52,9 @@ class VelocitySmoother:
 
         # update the current velocity
         self.vel_now.linear.x += self.cap_velocity(self.vel_goal.linear.x - self.vel_now.linear.x,
-                                                   self.vel_cap_lin)
+                                                   self.max_inc_lin)
         self.vel_now.angular.z += self.cap_velocity(self.vel_goal.angular.z - self.vel_now.angular.z,
-                                                    self.vel_cap_rot)
+                                                    self.max_inc_rot)
 
         # publish the new velocity
         self.cmd_vel_pub.publish(self.vel_now)
