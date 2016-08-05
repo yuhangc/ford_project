@@ -10,7 +10,8 @@
   	<param name="state_init" value="Idle"/>
   	<param name="human_input_mode" value="tilt_control"/>
   	<param name="dist_desired_follower" type="double" value="0.6"/>
-  	<param name="kp_follower" type="double" value="0.8"/>
+  	<param name="kp_linear" type="double" value="1.0"/>
+  	<param name="kp_angular" type="double" value="2.0"/>
   	<param name="dist_range_min" type="double" value="0.5"/>
   	<param name="dist_range_max" type="double" value="3.0"/>
   	<param name="pitch_offset" type="double" value="0.1"/>
