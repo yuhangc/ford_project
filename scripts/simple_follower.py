@@ -116,6 +116,8 @@ class SimpleFollower:
                                                       Int8, self.set_cmd_state_cb)
 
         # publisher to robot velocity
+        self.robot_state_pub = rospy.Publisher("robot_follower_state",
+                                               Int8, queue_size=1)
         self.robot_vel_pub = rospy.Publisher("cmd_vel",
                                              Twist, queue_size=1)
         self.haptic_msg_pub = rospy.Publisher("haptic_control",
@@ -337,18 +339,27 @@ class SimpleFollower:
             self.loop_count = 0
 
         # run over states
+        current_state = Int8()
         if self.state == "Idle":
             self.idle()
+            current_state.data = 0
         elif self.state == "Follow":
             self.follow()
+            current_state.data = 1
         elif self.state == "LostVision":
             self.lost_vision()
+            current_state.data = 2
         elif self.state == "GetStuck":
             self.get_stuck()
+            current_state.data = 3
         elif self.state == "Teleop":
             self.teleop()
+            current_state.data = 4
         else:
             rospy.logerr("Unknown state!")
+
+        # publish the state
+        self.robot_state_pub.publish(current_state)
 
         # a mini state machine for sending desired velocity
         if self.cmd_state == "Idle":
