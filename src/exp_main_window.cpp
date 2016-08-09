@@ -19,7 +19,7 @@ ExpMainWindow::~ExpMainWindow()
 // ============================================================================
 void ExpMainWindow::Init()
 {
-    // Initialize the subscribers/publishers
+    // Initialize the subscribers
     this->robot_state_sub = this->nh.subscribe<std_msgs::Int8>("/robot_follower_state", 1,
                                                                &ExpMainWindow::robot_state_callback, this);
     this->robot_odom_sub = this->nh.subscribe<nav_msgs::Odometry>("/odom", 1,
@@ -29,8 +29,24 @@ void ExpMainWindow::Init()
 
     this->tracking_status_sub = this->nh.subscribe<std_msgs::String>("/tracking/status", 1,
                                                                    &ExpMainWindow::tracking_status_callback, this);
-    this->human_pose_sub = this->nh.subscribe<geometry_msgs::Pose2D>("/tracking/human_pos", 1,
+    this->human_pose_sub = this->nh.subscribe<geometry_msgs::Pose2D>("/tracking/human_pos2d", 1,
                                                                      &ExpMainWindow::human_pose_callback, this);
+
+    this->imu_acc_sub = this->nh.subscribe<geometry_msgs::Vector3>("/human_input/acc_raw", 1,
+                                                                   &ExpMainWindow::imu_acc_callback, this);
+    this->imu_gyro_sub = this->nh.subscribe<geometry_msgs::Vector3>("/human_input/gyro_raw", 1,
+                                                                   &ExpMainWindow::imu_acc_callback, this);
+    this->imu_acc_sub = this->nh.subscribe<geometry_msgs::Vector3>("/human_input/mag_raw", 1,
+                                                                   &ExpMainWindow::imu_acc_callback, this);
+
+    this->gesture_rec_sub = this->nh.subscribe<std_msgs::Int8>("/human_input/gesture", 1,
+                                                               &ExpMainWindow::gesture_rec_callback, this);
+
+    this->sys_msg_sub = this->nh.subscribe<std_msgs::String>("/sys_message", 1,
+                                                             &ExpMainWindow::sys_msg_callback, this);
+
+    // initialize publishers
+    this->set_robot_state_pub = this->nh.advertise<std_msgs::Int8>("/state_control/set_state", 1);
 
     // get parameters
     this->vel_inc_limit_lin = 0.02;
@@ -188,6 +204,10 @@ void ExpMainWindow::gesture_rec_callback(const std_msgs::Int8::ConstPtr &gesture
 }
 
 // ============================================================================
+void ExpMainWindow::sys_msg_callback(const std_msgs::String::ConstPtr &sys_msg)
+{
+    ui->browser_sys_message->append(QString::fromStdString(sys_msg->data));
+}
 
 // ============================================================================
 void ExpMainWindow::on_combo_set_state_currentIndexChanged(int index)

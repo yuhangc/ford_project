@@ -47,6 +47,15 @@ private:
     ros::Subscriber human_pose_sub;
     ros::Subscriber human_vel_sub;
 
+    ros::Subscriber imu_acc_sub;
+    ros::Subscriber imu_gyro_sub;
+    ros::Subscriber imu_mag_sub;
+    ros::Subscriber imu_tilt_sub;
+
+    ros::Subscriber gesture_rec_sub;
+
+    ros::Subscriber sys_msg_sub;
+
     // publishers
     ros::Publisher set_robot_state_pub;
     ros::Publisher cmd_vel_pub;
@@ -76,6 +85,8 @@ private:
     void imu_tilt_callback(const geometry_msgs::Vector3::ConstPtr& tilt_msg);
 
     void gesture_rec_callback(const std_msgs::Int8::ConstPtr& gesture_msg);
+
+    void sys_msg_callback(const std_msgs::String::ConstPtr& sys_msg);
 
 private slots:
     void UpdateGUIInfo();

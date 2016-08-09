@@ -123,6 +123,10 @@ class SimpleFollower:
         self.haptic_msg_pub = rospy.Publisher("haptic_control",
                                               haptic_msg, queue_size=1)
 
+        # publisher to system message
+        self.sys_msg_pub = rospy.Publisher("sys_message",
+                                           String, queue_size=1)
+
     # call back functions
     def human_track_pose_cb(self, msg):
         self.human_pose = msg
@@ -211,6 +215,7 @@ class SimpleFollower:
             # check if already have human in vision
             if self.track_status == "Lost":
                 rospy.logwarn("Cannot start following! Human not found!")
+                self.sys_msg_pub.publish("Cannot start following! Human not found!")
             else:
                 # set to state follow
                 self.state = "Follow"
@@ -231,6 +236,7 @@ class SimpleFollower:
                 self.send_vel_cmd(0, 0, 0.5)
                 self.state = "LostVision"
                 rospy.logwarn("Lost vision of human!")
+                self.sys_msg_pub.publish("Lost vision of human!")
                 return
         else:
             self.lost_vision_count = 0
@@ -246,6 +252,7 @@ class SimpleFollower:
                 self.send_vel_cmd(0, 0, 0.5)
                 self.state = "GetStuck"
                 rospy.logwarn("Robot stuck!")
+                self.sys_msg_pub.publish("Robot stuck!")
                 return
         else:
             self.stuck_count = 0
@@ -274,6 +281,7 @@ class SimpleFollower:
         if self.set_state == 1:
             if self.track_status == "Find":
                 rospy.logwarn('Prepare to switch to follow')
+                self.sys_msg_pub.publish("Prepare to switch to follow")
                 if self.dist_range_min < self.human_pose.y < self.dist_range_max:
                     self.set_state = -1
                     self.state = "Follow"
