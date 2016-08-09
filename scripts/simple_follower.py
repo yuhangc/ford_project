@@ -321,22 +321,22 @@ class SimpleFollower:
             # rospy.loginfo("cmd_vel_sent!")
 
     def update(self):
-        # update loop counter
-        self.loop_count += 1
-        if self.loop_count == 10:
-            # rospy.logwarn("display image!")
-            img = np.zeros((128, 128, 3), np.uint8)
-            if self.state == "Idle":
-                cv2.circle(img, (64, 64), 63, (0, 200, 200), -1)
-            elif self.state == "Follow":
-                cv2.circle(img, (64, 64), 63, (0, 200, 0), -1)
-            elif self.state == "LostVision":
-                cv2.circle(img, (64, 64), 63, (0, 0, 200), -1)
-            elif self.state == "GetStuck":
-                cv2.circle(img, (64, 64), 63, (200, 0, 200), -1)
-            cv2.imshow("status", img)
-            cv2.waitKey(3)
-            self.loop_count = 0
+        # # update loop counter
+        # self.loop_count += 1
+        # if self.loop_count == 10:
+        #     # rospy.logwarn("display image!")
+        #     img = np.zeros((128, 128, 3), np.uint8)
+        #     if self.state == "Idle":
+        #         cv2.circle(img, (64, 64), 63, (0, 200, 200), -1)
+        #     elif self.state == "Follow":
+        #         cv2.circle(img, (64, 64), 63, (0, 200, 0), -1)
+        #     elif self.state == "LostVision":
+        #         cv2.circle(img, (64, 64), 63, (0, 0, 200), -1)
+        #     elif self.state == "GetStuck":
+        #         cv2.circle(img, (64, 64), 63, (200, 0, 200), -1)
+        #     cv2.imshow("status", img)
+        #     cv2.waitKey(3)
+        #     self.loop_count = 0
 
         # run over states
         current_state = Int8()

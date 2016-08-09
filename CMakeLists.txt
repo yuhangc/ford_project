@@ -55,6 +55,10 @@ catkin_package(
 ## Build ##
 ###########
 
+## specify qt packages and directories
+find_package(Qt5Widgets REQUIRED)
+include_directories(${Qt5Widgets_INCLUDES})
+
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
@@ -95,6 +99,20 @@ set(GESTURE_HEADERS
     include/ford_project/gesture_DTW.h
 )
 
+# set source, header and the ui for the experiment main control window
+set(EXP_WINDOW_SOURCES
+    src/exp_main_window.cpp
+    src/exp_control.cpp
+)
+
+set(EXP_WINDOW_HEADERS
+    include/ford_project/exp_main_window.h
+)
+
+set(EXP_WINDOW_FORMS
+    ui/exp_main_window.ui
+)
+
 ## Declare a C++ executable
 add_executable(imu_manager ${IMU_MANAGER_SOURCES} ${IMU_MANAGER_HEADERS})
 target_link_libraries(imu_manager ${catkin_LIBRARIES})
@@ -104,6 +122,15 @@ target_link_libraries(haptic_test ${catkin_LIBRARIES} 826_64)
 
 add_executable(gesture_DTW ${GESTURE_SOURCES} ${GESTURE_HEADERS})
 target_link_libraries(gesture_DTW ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
+
+# compile the experiment main window application
+qt5_wrap_cpp(MOC_SOURCES ${EXP_WINDOW_HEADERS})
+qt5_wrap_ui(FORMS_HEADERS ${EXP_WINDOW_FORMS})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+
+add_executable(exp_control ${EXP_WINDOW_SOURCES} ${EXP_WINDOW_HEADERS} ${MOC_SOURCES} ${FORMS_HEADERS})
+target_link_libraries(exp_control ${catkin_LIBRARIES})
+qt5_use_modules(exp_control Widgets)
 
 ## Add cmake target dependencies of the executable
 # add_dependencies(ford_project_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
