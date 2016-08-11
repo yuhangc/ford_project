@@ -31,6 +31,8 @@ void ExpMainWindow::Init()
                                                                    &ExpMainWindow::tracking_status_callback, this);
     this->human_pose_sub = this->nh.subscribe<geometry_msgs::Pose2D>("/tracking/human_pos2d", 1,
                                                                      &ExpMainWindow::human_pose_callback, this);
+    this->human_vel_sub = this->nh.subscribe<geometry_msgs::Vector3>("/tracking/human_vel2d", 1,
+                                                                     &ExpMainWindow::human_vel_callback, this);
 
     this->imu_acc_sub = this->nh.subscribe<geometry_msgs::Vector3>("/human_input/acc_raw", 1,
                                                                    &ExpMainWindow::imu_acc_callback, this);
@@ -145,7 +147,9 @@ void ExpMainWindow::human_pose_callback(const geometry_msgs::Pose2D::ConstPtr &h
 // ============================================================================
 void ExpMainWindow::human_vel_callback(const geometry_msgs::Vector3::ConstPtr &human_vel_msg)
 {
-
+    ui->lcd_human_vel_x->display(human_vel_msg->x);
+    ui->lcd_human_vel_y->display(human_vel_msg->y);
+    ui->lcd_human_vel_omg->display(human_vel_msg->z);
 }
 
 // ============================================================================

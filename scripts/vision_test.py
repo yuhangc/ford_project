@@ -3,10 +3,12 @@
 import rospy
 import cv2, cv_bridge
 import numpy as np
+import copy
 import matplotlib.pyplot as plt
 
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Pose2D
+from geometry_msgs.msg import Vector3
 from std_msgs.msg import String
 
 
@@ -27,6 +29,7 @@ class SimpleHumanTracker:
         self.depth_image_sub = rospy.Subscriber(depth_image_source,
                                                 Image, self.depth_image_callback)
         self.pos2d_pub = rospy.Publisher("tracking/human_pos2d", Pose2D, queue_size=1)
+        self.vel2d_pub = rospy.Publisher("tracking/human_vel2d", Vector3, queue_size=1)
         self.status_pub = rospy.Publisher("tracking/status", String, queue_size=1)
 
         # initialize variables
@@ -48,6 +51,8 @@ class SimpleHumanTracker:
         self.height_cap = rospy.get_param("~height_cap", 20)
         self.width_cap = rospy.get_param("~width_cap", 10)
         self.depth_cap_min = rospy.get_param("~depth_cap_min", 0.3)
+        self.vel_filter_alpha = rospy.get_param("~vel_filter_alpha", 0.3)
+        self.dT = rospy.get_param("~dT", 0.1)
 
         # "focal length"
         self.fw = float(self.width) / 2.0 / np.tan(self.fov / 2.0)
@@ -61,6 +66,9 @@ class SimpleHumanTracker:
         self.mask = np.zeros((self.height, self.width), np.uint8)
 
         self.pos2d = Pose2D()
+        self.pos2d_old = Pose2D()
+        self.vel2d = Vector3()
+        self.vel2d_old = Vector3()
         self.status = "Lost"
 
     # rgb image callback
@@ -89,6 +97,13 @@ class SimpleHumanTracker:
         # cv2.imshow("window2", self.depth_image * 8)
         # cv2.waitKey(3)
 
+    def report_lost(self):
+        self.status = "Lost"
+        self.vel2d = Vector3()
+        self.pos2d_pub.publish(self.pos2d)
+        self.vel2d_pub.publish(self.vel2d)
+        self.status_pub.publish(self.status)
+
     def process_image(self):
         # data syncing
         while not (self.flag_rgb_received and self.flag_depth_received):
@@ -110,9 +125,7 @@ class SimpleHumanTracker:
 
         # return if no contours found
         if len(cnts) == 0:
-            self.status = "Lost"
-            self.pos2d_pub.publish(self.pos2d)
-            self.status_pub.publish(self.status)
+            self.report_lost()
             return
 
         # only use the largest contour
@@ -128,9 +141,7 @@ class SimpleHumanTracker:
 
         # return and report lost if the range is too small
         if area < self.range_lost_th:
-            self.status = "Lost"
-            self.pos2d_pub.publish(self.pos2d)
-            self.status_pub.publish(self.status)
+            self.report_lost()
             return
 
         # update the mask
@@ -147,9 +158,7 @@ class SimpleHumanTracker:
 
         # if too close don't update since the depth sensor won't work
         if avg_depth <= self.depth_cap_min:
-            self.status = "Lost"
-            self.pos2d_pub.publish(self.pos2d)
-            self.status_pub.publish(self.status)
+            self.report_lost()
             return
 
         # calculate the center position of the blob
@@ -158,8 +167,6 @@ class SimpleHumanTracker:
             cx = M['m10'] / M['m00']
         else:
             cx = 0
-
-        self.status = "Find"
 
         self.pos2d.x = float(cx - self.width / 2) * avg_depth / self.fw
         self.pos2d.y = avg_depth
@@ -193,8 +200,28 @@ class SimpleHumanTracker:
 
         self.pos2d.theta = np.arctan2(a[0], a[1]) * 180 / 3.14159
 
-        # publish the pos2d
+        # calculate velocity based on discretization
+        if self.status == "Find":
+            # previous status is also find
+            self.vel2d_old = self.vel2d
+            self.vel2d.x = (1 - self.vel_filter_alpha) * self.vel2d_old.x + \
+                           self.vel_filter_alpha * (self.pos2d.x - self.pos2d_old.x) / self.dT
+            self.vel2d.y = (1 - self.vel_filter_alpha) * self.vel2d_old.y + \
+                           self.vel_filter_alpha * (self.pos2d.y - self.pos2d_old.y) / self.dT
+            self.vel2d.z = (1 - self.vel_filter_alpha) * self.vel2d_old.z + \
+                           self.vel_filter_alpha * (self.pos2d.theta - self.pos2d_old.theta) / self.dT
+            # print self.vel2d.y, self.pos2d_old.y, self.pos2d.y
+        else:
+            # previous lost, then simple set velocity to zero
+            self.vel2d = Vector3()
+
+        # update the old position
+        self.pos2d_old = copy.deepcopy(self.pos2d)
+
+        # publish the pos2d and velocity
+        self.status = "Find"
         self.pos2d_pub.publish(self.pos2d)
+        self.vel2d_pub.publish(self.vel2d)
         self.status_pub.publish(self.status)
         # print self.pos2d
 

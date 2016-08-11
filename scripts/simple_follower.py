@@ -62,6 +62,7 @@ class SimpleFollower:
 
         # human tracking variables
         self.human_pose = Pose2D()
+        self.human_vel = Vector3()
         self.track_status = "Lost"
 
         # human input variables
@@ -77,7 +78,9 @@ class SimpleFollower:
         # variables for follower control
         self.dist_desired = rospy.get_param("~dist_desired_follower", 1.0)
         self.kp_linear = rospy.get_param("~kp_linear", 1.0)
+        self.kd_linear = rospy.get_param("~kd_linear", 0.1)
         self.kp_angular = rospy.get_param("~kp_angular", 2.0)
+        self.kd_angular = rospy.get_param("~kd_angular", 0.2)
 
         self.dist_range_min = rospy.get_param("~dist_range_min", 0.3)
         self.dist_range_max = rospy.get_param("~dist_range_max", 5.0)
@@ -97,6 +100,8 @@ class SimpleFollower:
         # subscribers to human tracking
         self.human_pose_sub = rospy.Subscriber("tracking/human_pos2d",
                                                Pose2D, self.human_track_pose_cb)
+        self.human_vel_sub = rospy.Subscriber("tracking/human_vel2d",
+                                              Vector3, self.human_track_vel_cb)
         self.track_status_sub = rospy.Subscriber("tracking/status",
                                                  String, self.human_track_status_cb)
         self.odom_sub = rospy.Subscriber("odom",
@@ -130,6 +135,9 @@ class SimpleFollower:
     # call back functions
     def human_track_pose_cb(self, msg):
         self.human_pose = msg
+
+    def human_track_vel_cb(self, vel_msg):
+        self.human_vel = vel_msg
 
     def human_track_status_cb(self, msg):
         self.track_status = msg.data
@@ -260,8 +268,8 @@ class SimpleFollower:
         self.check_set_state()
 
         # calculate desired velocity to follow
-        vx = -self.kp_linear * (self.dist_desired - self.human_pose.y)
-        omg = -self.kp_angular * self.human_pose.x
+        vx = -self.kp_linear * (self.dist_desired - self.human_pose.y) + self.kd_linear * self.human_vel.y
+        omg = -self.kp_angular * self.human_pose.x - self.kd_angular * self.human_vel.x
 
         self.send_vel_cmd(vx, omg)
 
