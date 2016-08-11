@@ -58,6 +58,7 @@ class SimpleFollower:
 
         # desired velocity for publish
         self.cmd_vel = Twist()
+        self.cmd_vel_smooth = Twist()
         self.measured_vel = Twist()
 
         # human tracking variables
@@ -120,6 +121,10 @@ class SimpleFollower:
         self.cmd_state_control_sub = rospy.Subscriber("cmd_state_control/set_state",
                                                       Int8, self.set_cmd_state_cb)
 
+        # subscribe to the smoothed velocity cmd
+        self.cmd_vel_smooth_sub = rospy.Subscriber("cmd_vel_mux/input/teleop",
+                                                   Twist, self.cmd_vel_smooth_cb)
+
         # publisher to robot velocity
         self.robot_state_pub = rospy.Publisher("robot_follower_state",
                                                Int8, queue_size=1)
@@ -165,6 +170,9 @@ class SimpleFollower:
 
     def odom_cb(self, msg):
         self.measured_vel = msg.twist.twist
+
+    def cmd_vel_smooth_cb(self, cmd_vel_msg):
+        self.cmd_vel_smooth = cmd_vel_msg
 
     # utility functions
     def send_vel_cmd(self, vx, omg, T=0.0):
@@ -250,7 +258,7 @@ class SimpleFollower:
             self.lost_vision_count = 0
 
         # check if get stuck
-        if np.abs(self.measured_vel.linear.x - self.cmd_vel.linear.x) > self.vel_err_th:
+        if np.abs(self.measured_vel.linear.x - self.cmd_vel_smooth.linear.x) > self.vel_err_th:
             self.stuck_count += 1
             if self.stuck_count >= self.stuck_count_limit:
                 # send haptic signal
