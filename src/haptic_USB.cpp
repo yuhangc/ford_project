@@ -1,19 +1,15 @@
-//------------------------------- Include ----------------------------------
 #include <iostream>
 #include <math.h>
 
-#include "haptic_test.h"
+#include "haptic_USB.h"
 
-//------------------------------- Defines ----------------------------------
-#define DAC_VSCALAR 32767		// Binary-to-volts scalar for DAC
 #define pi 3.14159
 
 // ============================================================================
 HapticController::HapticController()
 {
-    this->board = 0;
-    ros::param::param<int>("~analog_out_channel0", this->a_out0, 0);
-    ros::param::param<int>("~analog_out_channel1", this->a_out1, 1);
+    ros::param::param<int>("~analog_out_channel0", this->a_out0, 1);
+    ros::param::param<int>("~analog_out_channel1", this->a_out1, 3);
     ros::param::param<double>("~t_step", this->t_step, 0.007);
     ros::param::param<double>("~t_ramp", this->t_ramp, 0.018);
 
@@ -27,56 +23,34 @@ HapticController::HapticController()
 HapticController::~HapticController()
 {
     // Program all analog outputs to zero volts.
-    S826_DacDataWrite(this->board, this->a_out0, (uint)(DAC_VSCALAR), 0);
-    S826_DacDataWrite(this->board, this->a_out1, (uint)(DAC_VSCALAR), 0);
-
-    S826_SystemClose();
+    for (int ch = 0; ch < 4; ch ++) {
+        u_int16_t dacval = volts_USB31XX(BP_10_00V, 0);
+        usbAOut_USB31XX(this->hid_3101, ch, dacval, 0);
+    }
 }
 
 // ============================================================================
-void HapticController::init()
+int HapticController::init()
 {
-    int errcode = S826_ERR_OK;
-
-    int boardflags  = S826_SystemOpen();        // open 826 driver and find all 826 boards
-
-    if (boardflags < 0)
-        errcode = boardflags;                       // problem during open
-    else if ((boardflags & (1 << board)) == 0)
-        printf("TARGET BOARD NOT FOUND\n");         // driver didn't find board you want to use
-    else
-    {
-        // set output range
-        S826_DacRangeWrite(this->board, this->a_out0, S826_DAC_SPAN_5_5, 0);
-        S826_DacRangeWrite(this->board, this->a_out1, S826_DAC_SPAN_5_5, 0);
-
-        S826_DacDataWrite(this->board, this->a_out0, (uint)(DAC_VSCALAR), 0);
-        S826_DacDataWrite(this->board, this->a_out1, (uint)(DAC_VSCALAR), 0);
-
-        // Suspend this thread for 5 seconds.
-        ros::Duration(5).sleep();
+    // initialize the usb3101 board
+    int ret = hid_init();
+    if (ret < 0) {
+        ROS_ERROR("hid_init failed with return code %d", ret);
+        return -1;
     }
 
-    switch (errcode)
-    {
-    case S826_ERR_OK:           break;
-    case S826_ERR_BOARD:        printf("Illegal board number"); break;
-    case S826_ERR_VALUE:        printf("Illegal argument"); break;
-    case S826_ERR_NOTREADY:     printf("Device not ready or timeout"); break;
-    case S826_ERR_CANCELLED:    printf("Wait cancelled"); break;
-    case S826_ERR_DRIVER:       printf("Driver call failed"); break;
-    case S826_ERR_MISSEDTRIG:   printf("Missed adc trigger"); break;
-    case S826_ERR_DUPADDR:      printf("Two boards have same number"); break;S826_SafeWrenWrite(board, 0x02);
-    case S826_ERR_BOARDCLOSED:  printf("Board not open"); break;
-    case S826_ERR_CREATEMUTEX:  printf("Can't create mutex"); break;
-    case S826_ERR_MEMORYMAP:    printf("Can't map board"); break;
-    default:                    printf("Unknown error"); break;
+    if ((this->hid_3101 = hid_open(MCC_VID, USB3101_PID, NULL)) > 0) {
+        ROS_INFO("USB 3101 device is found!");
+    } else {
+        ROS_ERROR("USB 3010 device not found!");
     }
 
-//    // program dac output range
-//    S826_DacRangeWrite(board, 0, S826_DAC_SPAN_5_5, 0);
+    // configure digital IOs
 
-    ROS_INFO("Sensoray board initialized!");
+    // configure analog output channels
+    for (int ch = 0; ch < 4; ch ++) {
+        usbAOutConfig_USB31XX(this->hid_3101, ch, BP_10_00V);   // +/- 10V
+    }
 
     // set initial state
     this->state = State_Haptic_Idle;
@@ -226,13 +200,15 @@ void HapticController::render(double amp_max0, double amp_max1, double t_now)
 
     // send signal to sensoray
     int errcode;
-    uint dacval;
+    u_int16_t dacval;
 
-    dacval = (uint)(DAC_VSCALAR + DAC_VSCALAR * amp0 / 5.0);
-    S826_DacDataWrite(this->board, this->a_out0, dacval, 0);
+    dacval = volts_USB31XX(BP_10_00V, amp0);
+    usbAOut_USB31XX(this->hid_3101, this->a_out0, dacval, 0);
 
-    dacval = (uint)(DAC_VSCALAR + DAC_VSCALAR * amp1 / 5.0);
-    S826_DacDataWrite(this->board, this->a_out1, dacval, 0);
+    ros::Duration(0.000001).sleep();
+
+    dacval = volts_USB31XX(BP_10_00V, amp1);
+    usbAOut_USB31XX(this->hid_3101, this->a_out1, dacval, 0);
 }
 
 // ============================================================================

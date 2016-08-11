@@ -58,10 +58,14 @@ private:
 
     // publishers
     ros::Publisher set_robot_state_pub;
+    ros::Publisher haptic_control_pub;
     ros::Publisher cmd_vel_pub;
 
     // set state
     std_msgs::Int8 set_state;
+
+    // haptic signal
+    ford_project::haptic_msg haptic_signal;
 
     // set velocities
     double vel_inc_limit_lin;
@@ -95,6 +99,12 @@ private slots:
     void on_spinBox_vel_lin_valueChanged(double arg1);
     void on_spinBox_vel_ang_valueChanged(double arg1);
     void on_button_tele_forward_pressed();
+    void on_combo_haptic_dir_currentIndexChanged(int index);
+    void on_spinBox_haptic_rep_valueChanged(int arg1);
+    void on_spinBox_haptic_on_valueChanged(double arg1);
+    void on_spinBox_haptic_off_valueChanged(double arg1);
+    void on_button_send_haptic_clicked();
+    void on_combo_haptic_mag_currentIndexChanged(int index);
 };
 
 #endif // EXP_MAIN_WINDOW_H

@@ -65,10 +65,13 @@ include_directories(
     include/ford_project
     external/Arduino
     external/Sensoray826
+    external/MC-USB3101
     ${catkin_INCLUDE_DIRS}
-    ${Eigen_INCLUDE_DIRS})
+    ${Eigen_INCLUDE_DIRS}
+)
 
 link_directories(external/Sensoray826)
+link_directories(external/MC-USB3101)
 
 # set sources code and headers for IMU manager
 set(IMU_MANAGER_SOURCES
@@ -82,12 +85,20 @@ set(IMU_MANAGER_HEADERS
 )
 
 # set sources and headers for haptic thread
-set(HAPTIC_SOURCES
-    src/haptic_test.cpp
+set(HAPTIC_PCI_SOURCES
+    src/haptic_test_PCI.cpp
 )
 
-set(HAPTIC_HEADERS
-    include/ford_project/haptic_test.h
+set(HAPTIC_PCI_HEADERS
+    include/ford_project/haptic_test_PCI.h
+)
+
+set(HAPTIC_USB_SOURCES
+    src/haptic_USB.cpp
+)
+
+set(HAPTIC_USB_HEADERS
+    include/ford_project/haptic_USB.h
 )
 
 # set sources and headers for gesture recognition thread
@@ -117,8 +128,11 @@ set(EXP_WINDOW_FORMS
 add_executable(imu_manager ${IMU_MANAGER_SOURCES} ${IMU_MANAGER_HEADERS})
 target_link_libraries(imu_manager ${catkin_LIBRARIES})
 
-add_executable(haptic_test ${HAPTIC_SOURCES} ${HAPTIC_HEADERS})
-target_link_libraries(haptic_test ${catkin_LIBRARIES} 826_64)
+add_executable(haptic_test_PCI ${HAPTIC_PCI_SOURCES} ${HAPTIC_PCI_HEADERS})
+target_link_libraries(haptic_test_PCI ${catkin_LIBRARIES} 826_64)
+
+add_executable(haptic_USB ${HAPTIC_USB_SOURCES} ${HAPTIC_USB_HEADERS})
+target_link_libraries(haptic_USB ${catkin_LIBRARIES} usb-1.0 hidapi-libusb mccusb)
 
 add_executable(gesture_DTW ${GESTURE_SOURCES} ${GESTURE_HEADERS})
 target_link_libraries(gesture_DTW ${catkin_LIBRARIES} ${Eigen_LIBRARIES})

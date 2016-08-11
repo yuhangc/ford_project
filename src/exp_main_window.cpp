@@ -47,6 +47,7 @@ void ExpMainWindow::Init()
 
     // initialize publishers
     this->set_robot_state_pub = this->nh.advertise<std_msgs::Int8>("/state_control/set_state", 1);
+    this->haptic_control_pub = this->nh.advertise<ford_project::haptic_msg>("/haptic_control", 1);
 
     // get parameters
     this->vel_inc_limit_lin = 0.02;
@@ -54,6 +55,8 @@ void ExpMainWindow::Init()
 
     // initialize other variables
     this->set_state = std_msgs::Int8();
+    this->haptic_signal = ford_project::haptic_msg();
+
     this->cmd_vel = geometry_msgs::Twist();
     this->cmd_vel_goal = geometry_msgs::Twist();
     this->cmd_vel_limits = geometry_msgs::Twist();
@@ -248,4 +251,53 @@ void ExpMainWindow::on_spinBox_vel_ang_valueChanged(double arg1)
 void ExpMainWindow::on_button_tele_forward_pressed()
 {
     std::cout << "pressed!!!" << std::endl;
+}
+
+// ============================================================================
+void ExpMainWindow::on_combo_haptic_dir_currentIndexChanged(int index)
+{
+    this->haptic_signal.direction = index;
+}
+
+// ============================================================================
+void ExpMainWindow::on_spinBox_haptic_rep_valueChanged(int arg1)
+{
+    this->haptic_signal.repetition = arg1;
+}
+
+// ============================================================================
+void ExpMainWindow::on_spinBox_haptic_on_valueChanged(double arg1)
+{
+    this->haptic_signal.period_render = arg1;
+}
+
+// ============================================================================
+void ExpMainWindow::on_spinBox_haptic_off_valueChanged(double arg1)
+{
+    this->haptic_signal.period_pause = arg1;
+}
+
+// ============================================================================
+void ExpMainWindow::on_button_send_haptic_clicked()
+{
+    // check if the signal is valid
+
+    // publish the signal
+    this->haptic_control_pub.publish(this->haptic_signal);
+}
+
+// ============================================================================
+void ExpMainWindow::on_combo_haptic_mag_currentIndexChanged(int index)
+{
+    switch(index) {
+    case 0:
+        this->haptic_signal.amplitude = 0.8;
+        break;
+    case 1:
+        this->haptic_signal.amplitude = 1.0;
+        break;
+    case 2:
+        this->haptic_signal.amplitude = 1.2;
+        break;
+    }
 }
