@@ -80,8 +80,10 @@ class SimpleFollower:
         self.dist_desired = rospy.get_param("~dist_desired_follower", 1.0)
         self.kp_linear = rospy.get_param("~kp_linear", 1.0)
         self.kd_linear = rospy.get_param("~kd_linear", 0.1)
+        self.kb_linear = rospy.get_param("~kb_linear", 0.1)
         self.kp_angular = rospy.get_param("~kp_angular", 2.0)
         self.kd_angular = rospy.get_param("~kd_angular", 0.2)
+        self.kb_angular = rospy.get_param("~kb_angular", 0.2)
 
         self.dist_range_min = rospy.get_param("~dist_range_min", 0.3)
         self.dist_range_max = rospy.get_param("~dist_range_max", 5.0)
@@ -278,6 +280,10 @@ class SimpleFollower:
         # calculate desired velocity to follow
         vx = -self.kp_linear * (self.dist_desired - self.human_pose.y) + self.kd_linear * self.human_vel.y
         omg = -self.kp_angular * self.human_pose.x - self.kd_angular * self.human_vel.x
+
+        # add in some damping to the system
+        vx -= self.kb_linear * self.measured_vel.linear.x
+        omg -= self.kb_angular * self.measured_vel.angular.z
 
         self.send_vel_cmd(vx, omg)
 
