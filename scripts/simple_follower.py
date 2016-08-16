@@ -26,13 +26,15 @@ cmd_states_all = {0: "Idle",
                   1: "SendOnce",
                   2: "sendPeriod"}
 
-input_mode_all = {0: "gesture_control",
-                  1: "tilt_control"}
+input_mode_all = {1: "gesture_control",
+                  0: "tilt_control"}
 
-gesture_dict = {0: "forward",
-                1: "backward",
-                2: "turn_cw",
-                3: "turn_ccw"}
+gesture_dict = {0: "left_ccw",
+                1: "right_cw",
+                2: "forward",
+                3: "backward",
+                4: "start",
+                5: "stop"}
 
 
 class SimpleFollower:
@@ -114,7 +116,7 @@ class SimpleFollower:
                                                     Quaternion, self.human_input_tilt_cb)
         self.human_input_gesture_sub = rospy.Subscriber("human_input/gesture",
                                                         Int8, self.human_input_gesture_cb)
-        self.human_input_mode_sub = rospy.Subscriber("human_input/mode",
+        self.human_input_mode_sub = rospy.Subscriber("human_input/button",
                                                      Bool, self.human_input_mode_cb)
 
         # subscriber to state control
@@ -157,6 +159,12 @@ class SimpleFollower:
 
     def human_input_gesture_cb(self, msg):
         self.human_input_gesture = msg.data
+
+        # check if set to start/stop
+        if gesture_dict[self.human_input_gesture] == "start":
+            self.set_state = 1
+        elif gesture_dict[self.human_input_gesture] == "stop":
+            self.set_state = 0
 
     def human_input_mode_cb(self, msg):
         self.human_input_mode = input_mode_all[msg.data]
@@ -324,9 +332,9 @@ class SimpleFollower:
                 self.send_vel_cmd(-0.5, 0, 0.5)
             elif gesture == "backward":
                 self.send_vel_cmd(0.5, 0, 0.5)
-            elif gesture == "turn_cw":
+            elif gesture == "right_cw":
                 self.send_vel_cmd(0, -0.5, 0.5)
-            elif gesture == "turn_ccw":
+            elif gesture == "left_ccw":
                 self.send_vel_cmd(0, 0.5, 0.5)
             else:
                 self.send_vel_cmd(0, 0)

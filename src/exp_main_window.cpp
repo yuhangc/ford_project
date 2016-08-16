@@ -37,9 +37,9 @@ void ExpMainWindow::Init()
     this->imu_acc_sub = this->nh.subscribe<geometry_msgs::Vector3>("/human_input/acc_raw", 1,
                                                                    &ExpMainWindow::imu_acc_callback, this);
     this->imu_gyro_sub = this->nh.subscribe<geometry_msgs::Vector3>("/human_input/gyro_raw", 1,
-                                                                   &ExpMainWindow::imu_acc_callback, this);
-    this->imu_acc_sub = this->nh.subscribe<geometry_msgs::Vector3>("/human_input/mag_raw", 1,
-                                                                   &ExpMainWindow::imu_acc_callback, this);
+                                                                   &ExpMainWindow::imu_gyro_callback, this);
+    this->imu_mag_sub = this->nh.subscribe<geometry_msgs::Vector3>("/human_input/mag_raw", 1,
+                                                                   &ExpMainWindow::imu_mag_callback, this);
 
     this->gesture_rec_sub = this->nh.subscribe<std_msgs::Int8>("/human_input/gesture", 1,
                                                                &ExpMainWindow::gesture_rec_callback, this);
@@ -189,23 +189,23 @@ void ExpMainWindow::gesture_rec_callback(const std_msgs::Int8::ConstPtr &gesture
 {
     switch (gesture_msg->data)
     {
-    case 0:
+    case 2:
         ui->lineEdit_gesture_rec->setText("Recognized Gesgure: Forward");
         break;
-    case 1:
+    case 3:
         ui->lineEdit_gesture_rec->setText("Recognized Gesgure: Backward");
         break;
-    case 2:
+    case 0:
         ui->lineEdit_gesture_rec->setText("Recognized Gesgure: Turn Left");
         break;
-    case 3:
+    case 1:
         ui->lineEdit_gesture_rec->setText("Recognized Gesgure: Turn Right");
         break;
     case 4:
-        ui->lineEdit_gesture_rec->setText("Recognized Gesgure: Stop Following");
+        ui->lineEdit_gesture_rec->setText("Recognized Gesgure: Start Following");
         break;
     case 5:
-        ui->lineEdit_gesture_rec->setText("Recognized Gesgure: Start Following");
+        ui->lineEdit_gesture_rec->setText("Recognized Gesgure: Stop Following");
         break;
     }
 }

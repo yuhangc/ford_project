@@ -13,15 +13,15 @@ GestureDTW::GestureDTW()
     this->gesture_pub = this->nh.advertise<std_msgs::Int8>("/human_input/gesture", 1);
 
     // initialize the "constants"
-    ros::param::param<int>("~num_gestures", this->num_gestures, 4);
+    ros::param::param<int>("~num_gestures", this->num_gestures, 6);
     ros::param::param<int>("~max_window_size", this->max_window_size, 45);
     ros::param::param<int>("~dtw_window", this->dtw_window, 45);
 
     this->time_debounce = 0.5;
     this->time_gesture_start = 0;
 
-    double vals[] = {1.5, 1.5, 1.5, 1.5};
-    this->rej_corr.assign(vals, vals+4);
+    double vals[] = {1.5, 1.5, 1.5, 1.5, 1.5, 1.5};
+    this->rej_corr.assign(vals, vals+this->num_gestures);
 
     // flags
     this->flag_gesture = false;
@@ -69,8 +69,7 @@ void GestureDTW::acc_data_callback(const geometry_msgs::Vector3::ConstPtr &msg)
             this->flag_gesture = false;
             this->state = State_Detection_Debounce;
             this->time_gesture_start = ros::Time::now().toSec();
-            std::cout << "gesture " << this->gesture_id << std::endl;
-//            std::cout << this->time_gesture_start << std::endl;
+            // std::cout << "gesture " << this->gesture_id << std::endl;
         }
         break;
 
@@ -106,7 +105,7 @@ void GestureDTW::load_data(std::string file_path)
     for (int g = 0; g < this->num_gestures; g++)
     {
         full_path.str("");
-        full_path << file_path << "/temp_gesture" << g << ".txt";
+        full_path << file_path << "/template" << g << ".txt";
         data_file.open(full_path.str().c_str());
 
         // get data into a vector first
@@ -127,6 +126,7 @@ void GestureDTW::load_data(std::string file_path)
             ss >> temp(i, 1);
             ss.ignore(1);
             ss >> temp(i, 2);
+            std::cout << temp(i, 0) << " " << temp(i, 1) << std::endl;
         }
 
         // add gesture template

@@ -24,6 +24,7 @@ private:
     ros::Publisher acc_data_pub;
     ros::Publisher gyro_data_pub;
     ros::Publisher meg_data_pub;
+    ros::Publisher button_pub;
 
     // arduino device
     CArduinoDevice* arduino;
@@ -32,6 +33,7 @@ private:
     geometry_msgs::Vector3 acc_data;
     geometry_msgs::Vector3 gyro_data;
     geometry_msgs::Vector3 meg_data;
+    std_msgs::Bool button_data;
 
     std_msgs::Bool button_val;
 };

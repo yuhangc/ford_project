@@ -11,6 +11,7 @@ IMUManager::IMUManager()
     this->acc_data_pub = this->nh.advertise<geometry_msgs::Vector3>("human_input/acc_raw", 1);
     this->gyro_data_pub = this->nh.advertise<geometry_msgs::Vector3>("human_input/gyro_raw", 1);
     this->meg_data_pub = this->nh.advertise<geometry_msgs::Vector3>("human_input/mag_raw", 1);
+    this->button_pub = this->nh.advertise<std_msgs::Bool>("human_input/button", 1);
 
     // initialize the arduino device
     this->arduino = new CArduinoDevice("/dev/ttyACM0",CArduinoDevice::BAUD_115200);
@@ -48,20 +49,19 @@ void IMUManager::update()
     std::stringstream ss(message);
 
     if (read_n > 10) {
-        double t;
-        ss >> t;
-        ss.ignore(2);
-        ss >> gyro_data.x;
-        ss.ignore(2);
-        ss >> gyro_data.y;
-        ss.ignore(2);
-        ss >> gyro_data.z;
+        ss >> button_data.data;
         ss.ignore(2);
         ss >> acc_data.x;
         ss.ignore(2);
         ss >> acc_data.y;
         ss.ignore(2);
         ss >> acc_data.z;
+        ss.ignore(2);
+        ss >> gyro_data.x;
+        ss.ignore(2);
+        ss >> gyro_data.y;
+        ss.ignore(2);
+        ss >> gyro_data.z;
         ss.ignore(2);
         ss >> meg_data.x;
         ss.ignore(2);
@@ -72,6 +72,7 @@ void IMUManager::update()
         this->gyro_data_pub.publish(this->gyro_data);
         this->acc_data_pub.publish(this->acc_data);
         this->meg_data_pub.publish(this->meg_data);
+        this->button_pub.publish(this->button_data);
 
 //        std::cout << this->gyro_data << std::endl;
 //        std::cout << this->acc_data << std::endl;
