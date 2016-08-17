@@ -156,7 +156,7 @@ class SimpleFollower:
                                            String, queue_size=1)
 
         # publisher to base LED
-        self.LED1_pub = rospy.Publisher("mobile_base/commands/LED1",
+        self.LED1_pub = rospy.Publisher("mobile_base/commands/led1",
                                         Led, queue_size=1)
 
     # call back functions
