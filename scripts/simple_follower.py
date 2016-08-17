@@ -77,7 +77,7 @@ class SimpleFollower:
         self.track_status = "Lost"
 
         # human input variables
-        self.human_input_tilt = np.array([0.0, 0.0, 0.0])  # roll, pitch, yaw
+        self.human_input_tilt = Vector3()  # roll, pitch, yaw
         self.human_input_gesture = -1  # 10 means no gesture input
 
         self.human_input_mode = rospy.get_param("~human_input_mode", "tilt_control")
@@ -99,12 +99,13 @@ class SimpleFollower:
         self.dist_range_max = rospy.get_param("~dist_range_max", 5.0)
 
         # variables for tilt control
-        self.pitch_to_linear_scale = rospy.get_param("~pitch_to_linear_scale", -1.0)
-        self.roll_to_angular_scale = rospy.get_param("~roll_to_angular_scale", 1.0)
+        self.roll_to_linear_scale = rospy.get_param("~roll_to_linear_scale", -1.0)
+        self.pitch_to_angular_scale = rospy.get_param("~pitch_to_angular_scale", 1.0)
         self.pitch_deadband = rospy.get_param("~pitch_deadband", 0.3)
         self.roll_deadband = rospy.get_param("~roll_deadband", 0.3)
         self.pitch_offset = rospy.get_param("pitch_offset", 0.2)
         self.roll_offset = rospy.get_param("roll_offset", 0.2)
+        self.roll_center_offset = rospy.get_param("roll_center_offset", 0.1)
 
         # haptic signal thresholds
         self.haptic_dir_thresh = 30
@@ -121,7 +122,7 @@ class SimpleFollower:
                                          Odometry, self.odom_cb)
         # subscribers to human input
         self.human_input_ort_sub = rospy.Subscriber("human_input/tilt",
-                                                    Quaternion, self.human_input_tilt_cb)
+                                                    Vector3, self.human_input_tilt_cb)
         self.human_input_gesture_sub = rospy.Subscriber("human_input/gesture",
                                                         Int8, self.human_input_gesture_cb)
         self.human_input_mode_sub = rospy.Subscriber("human_input/button",
@@ -164,10 +165,10 @@ class SimpleFollower:
         self.track_status = msg.data
 
     def human_input_tilt_cb(self, msg):
-        q = np.array([msg.x, msg.y, msg.z, msg.w])
-        self.human_input_tilt = transformations.euler_from_quaternion(q, axes='rxyz')
-        rospy.loginfo("tilt angles are %f %f %f", self.human_input_tilt[0],
-                      self.human_input_tilt[1], self.human_input_tilt[2])
+        self.human_input_tilt = msg
+        self.human_input_tilt.x += self.roll_center_offset
+        # rospy.loginfo("tilt angles are %f %f %f", self.human_input_tilt[0],
+        #               self.human_input_tilt[1], self.human_input_tilt[2])
 
     def human_input_gesture_cb(self, msg):
         self.human_input_gesture = msg.data
@@ -179,7 +180,10 @@ class SimpleFollower:
             self.set_state = 0
 
     def human_input_mode_cb(self, msg):
-        self.human_input_mode = input_mode_all[msg.data]
+        if msg.data:
+            self.human_input_mode = "tilt_control"
+        else:
+            self.human_input_mode = "gesture_control"
 
     def set_state_cb(self, msg):
         self.set_state = msg.data
@@ -368,19 +372,19 @@ class SimpleFollower:
 
             self.human_input_gesture = -1
         else:
-            if self.human_input_tilt[0] > self.roll_deadband:
-                omg = self.roll_to_angular_scale * (self.human_input_tilt[0] - self.roll_offset)
-            elif self.human_input_tilt[0] < -self.roll_deadband:
-                omg = self.roll_to_angular_scale * (self.human_input_tilt[0] + self.roll_offset)
-            else:
-                omg = 0
-
-            if self.human_input_tilt[1] > self.pitch_deadband:
-                vx = self.pitch_to_linear_scale * (self.human_input_tilt[1] - self.pitch_offset)
-            elif self.human_input_tilt[1] < -self.pitch_deadband:
-                vx = self.pitch_to_linear_scale * (self.human_input_tilt[1] + self.pitch_offset)
+            if self.human_input_tilt.x > self.roll_deadband:
+                vx = self.roll_to_linear_scale * (self.human_input_tilt.x - self.roll_offset)
+            elif self.human_input_tilt.x < -self.roll_deadband:
+                vx = self.roll_to_linear_scale * (self.human_input_tilt.x + self.roll_offset)
             else:
                 vx = 0
+
+            if self.human_input_tilt.y > self.pitch_deadband:
+                omg = self.pitch_to_angular_scale * (self.human_input_tilt.y - self.pitch_offset)
+            elif self.human_input_tilt.y < -self.pitch_deadband:
+                omg = self.pitch_to_angular_scale * (self.human_input_tilt.y + self.pitch_offset)
+            else:
+                omg = 0
 
             self.send_vel_cmd(vx, omg)
             # rospy.loginfo("cmd_vel_sent!")

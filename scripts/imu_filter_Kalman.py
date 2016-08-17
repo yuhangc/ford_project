@@ -19,6 +19,7 @@ class OrientationEstimator:
         self.gyro_data = Vector3()
         self.acc_data = Vector3()
         self.mag_data = Vector3()
+        self.orientation_euler = Vector3()
 
         # mode: on/off
         self.filter_mode = rospy.get_param("~filter_mode", "off")
@@ -53,7 +54,7 @@ class OrientationEstimator:
                                              Vector3, self.mag_data_callback)
 
         self.orientation_pub = rospy.Publisher("human_input/tilt",
-                                               Quaternion, queue_size=1)
+                                               Vector3, queue_size=1)
 
     def gyro_data_callback(self, msg):
         self.gyro_data = msg
@@ -123,7 +124,7 @@ class OrientationEstimator:
 
         # convert from Vector3 to np.array
         omg = np.array([self.gyro_data.x, self.gyro_data.y, self.gyro_data.z]) * np.pi / 180.0
-        acc = np.array([self.acc_data.x, self.acc_data.y, self.acc_data.z])
+        acc = np.array([self.acc_data.x, self.acc_data.y, -self.acc_data.z])
         mag = np.array([self.mag_data.x, self.mag_data.y, -self.mag_data.z])
 
         if self.filter_mode == "on":
@@ -176,23 +177,30 @@ class OrientationEstimator:
             self.orientation_filtered.w = self.q[3]
 
             # print filtered orientation
-            # euler = transformations.euler_from_quaternion(self.q, axes='rxyz')
+            euler = transformations.euler_from_quaternion(self.q, axes='rxyz')
             # print euler[0]/np.pi*180, euler[1]/np.pi*180, euler[2]/np.pi*180
+            self.orientation_euler.x = euler[0]
+            self.orientation_euler.y = euler[1]
+            self.orientation_euler.z = euler[2]
         else:
             roll = np.arctan2(acc[1], acc[2])
             pitch = np.arctan(-acc[0] / (acc[1] * np.sin(roll) + acc[2] * np.cos(roll)))
             yaw = np.arctan2(mag[2] * np.sin(roll) - mag[1] * np.cos(roll),
                              mag[0] * np.cos(pitch) + mag[1] * np.sin(pitch) +
                              mag[2] * np.sin(pitch) * np.cos(roll))
-            print roll, pitch, yaw
-            q = transformations.quaternion_from_euler(roll, pitch, yaw, axes='rxyz')
-            self.orientation_filtered.x = q[0]
-            self.orientation_filtered.y = q[1]
-            self.orientation_filtered.z = q[2]
-            self.orientation_filtered.w = q[3]
+            # print roll, pitch, yaw
+            self.orientation_euler.x = roll
+            self.orientation_euler.y = pitch
+            self.orientation_euler.z = yaw
+
+            # q = transformations.quaternion_from_euler(roll, pitch, yaw, axes='rxyz')
+            # self.orientation_filtered.x = q[0]
+            # self.orientation_filtered.y = q[1]
+            # self.orientation_filtered.z = q[2]
+            # self.orientation_filtered.w = q[3]
 
         # publish the filtered orientation
-        self.orientation_pub.publish(self.orientation_filtered)
+        self.orientation_pub.publish(self.orientation_euler)
 
 
 if __name__ == "__main__":

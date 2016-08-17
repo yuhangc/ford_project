@@ -49,7 +49,14 @@ void IMUManager::update()
     std::stringstream ss(message);
 
     if (read_n > 10) {
-        ss >> button_data.data;
+        int t_button;
+        ss >> t_button;
+        if (t_button == 0) {
+            button_data.data = false;
+        } else {
+            button_data.data = true;
+        }
+        // ss >> button_data.data;
         ss.ignore(2);
         ss >> acc_data.x;
         ss.ignore(2);

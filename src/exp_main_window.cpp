@@ -40,6 +40,8 @@ void ExpMainWindow::Init()
                                                                    &ExpMainWindow::imu_gyro_callback, this);
     this->imu_mag_sub = this->nh.subscribe<geometry_msgs::Vector3>("/human_input/mag_raw", 1,
                                                                    &ExpMainWindow::imu_mag_callback, this);
+    this->imu_tilt_sub = this->nh.subscribe<geometry_msgs::Vector3>("/human_input/tilt", 1,
+                                                                    &ExpMainWindow::imu_tilt_callback, this);
 
     this->gesture_rec_sub = this->nh.subscribe<std_msgs::Int8>("/human_input/gesture", 1,
                                                                &ExpMainWindow::gesture_rec_callback, this);
@@ -228,7 +230,7 @@ void ExpMainWindow::on_combo_set_state_currentIndexChanged(int index)
         this->set_state.data = 1;
         break;
     case 2:
-        this->set_state.data = 2;
+        this->set_state.data = 4;
         break;
     }
 }
