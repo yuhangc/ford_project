@@ -15,6 +15,7 @@ from std_msgs.msg import Int8
 from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
 from kobuki_msgs.msg import BumperEvent
+from kobuki_msgs.msg import Led
 
 from ford_project.msg import haptic_msg
 
@@ -99,8 +100,8 @@ class SimpleFollower:
         self.dist_range_max = rospy.get_param("~dist_range_max", 5.0)
 
         # variables for tilt control
-        self.roll_to_linear_scale = rospy.get_param("~roll_to_linear_scale", -1.0)
-        self.pitch_to_angular_scale = rospy.get_param("~pitch_to_angular_scale", 1.0)
+        self.roll_to_linear_scale = rospy.get_param("~roll_to_linear_scale", 1.0)
+        self.pitch_to_angular_scale = rospy.get_param("~pitch_to_angular_scale", 3.0)
         self.pitch_deadband = rospy.get_param("~pitch_deadband", 0.3)
         self.roll_deadband = rospy.get_param("~roll_deadband", 0.3)
         self.pitch_offset = rospy.get_param("pitch_offset", 0.2)
@@ -153,6 +154,10 @@ class SimpleFollower:
         # publisher to system message
         self.sys_msg_pub = rospy.Publisher("sys_message",
                                            String, queue_size=1)
+
+        # publisher to base LED
+        self.LED1_pub = rospy.Publisher("mobile_base/commands/LED1",
+                                        Led, queue_size=1)
 
     # call back functions
     def human_track_pose_cb(self, msg):
@@ -371,6 +376,7 @@ class SimpleFollower:
                 self.send_vel_cmd(0, 0)
 
             self.human_input_gesture = -1
+            print "gesture control"
         else:
             if self.human_input_tilt.x > self.roll_deadband:
                 vx = self.roll_to_linear_scale * (self.human_input_tilt.x - self.roll_offset)
@@ -387,6 +393,7 @@ class SimpleFollower:
                 omg = 0
 
             self.send_vel_cmd(vx, omg)
+            print "tilt control"
             # rospy.loginfo("cmd_vel_sent!")
 
     def update(self):
@@ -412,18 +419,23 @@ class SimpleFollower:
         if self.state == "Idle":
             self.idle()
             current_state.data = 0
+            self.LED1_pub.publish(Led.BLACK)
         elif self.state == "Follow":
             self.follow()
             current_state.data = 1
+            self.LED1_pub.publish(Led.GREEN)
         elif self.state == "LostVision":
             self.lost_vision()
             current_state.data = 2
+            self.LED1_pub.publish(Led.ORANGE)
         elif self.state == "GetStuck":
             self.get_stuck()
             current_state.data = 3
+            self.LED1_pub.publish(Led.RED)
         elif self.state == "Teleop":
             self.teleop()
             current_state.data = 4
+            self.LED1_pub.publish(Led.BLACK)
         else:
             rospy.logerr("Unknown state!")
 
