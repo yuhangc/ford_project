@@ -138,7 +138,7 @@ class SimpleFollower:
                                                    Twist, self.cmd_vel_smooth_cb)
 
         # subscribe to the bumper event
-        self.bumper_event_sub = rospy.Subscriber("mobile_base/events/BumperEvent",
+        self.bumper_event_sub = rospy.Subscriber("mobile_base/events/bumper",
                                                  BumperEvent, self.bumper_event_cb)
 
         # publisher to robot velocity
