@@ -10,11 +10,13 @@ from geometry_msgs.msg import Pose2D
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Vector3
 from geometry_msgs.msg import Quaternion
-from ford_project.msg import haptic_msg
 from std_msgs.msg import String
 from std_msgs.msg import Int8
 from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
+from kobuki_msgs.msg import BumperEvent
+
+from ford_project.msg import haptic_msg
 
 states_all = {0: "Idle",
               1: "Follow",
@@ -53,15 +55,21 @@ class SimpleFollower:
         self.loop_count = 0
         self.stuck_count = 0
         self.lost_vision_count = 0
+        self.too_fast_count = 0
 
         self.stuck_count_limit = rospy.get_param("~stuck_count_limit", 25)
         self.lost_vision_count_limit = rospy.get_param("~lost_vision_count_limit", 25)
+        self.too_fast_count_limit = rospy.get_param("~too_fast_count_limit", 25)
         self.vel_err_th = rospy.get_param("~velocity_error_threshold", 0.2)
+        self.turtlebot_vel_max = rospy.get_param("~turtlebot_vel_max", 0.7)
 
         # desired velocity for publish
         self.cmd_vel = Twist()
         self.cmd_vel_smooth = Twist()
         self.measured_vel = Twist()
+
+        # bumper variable
+        self.bumper_event = BumperEvent()
 
         # human tracking variables
         self.human_pose = Pose2D()
@@ -129,6 +137,10 @@ class SimpleFollower:
         self.cmd_vel_smooth_sub = rospy.Subscriber("cmd_vel_mux/input/teleop",
                                                    Twist, self.cmd_vel_smooth_cb)
 
+        # subscribe to the bumper event
+        self.bumper_event_sub = rospy.Subscriber("mobile_base/events/BumperEvent",
+                                                 BumperEvent, self.bumper_event_cb)
+
         # publisher to robot velocity
         self.robot_state_pub = rospy.Publisher("robot_follower_state",
                                                Int8, queue_size=1)
@@ -183,6 +195,9 @@ class SimpleFollower:
 
     def cmd_vel_smooth_cb(self, cmd_vel_msg):
         self.cmd_vel_smooth = cmd_vel_msg
+
+    def bumper_event_cb(self, bumper_event_msg):
+        self.bumper_event = bumper_event_msg
 
     # utility functions
     def send_vel_cmd(self, vx, omg, T=0.0):
@@ -267,8 +282,20 @@ class SimpleFollower:
         else:
             self.lost_vision_count = 0
 
+        # check if human is walking too fast
+        if np.abs(self.cmd_vel_smooth.linear.x) > self.turtlebot_vel_max:
+            self.too_fast_count += 1
+            if self.too_fast_count >= self.too_fast_count_limit:
+                # send haptic signal
+                self.send_haptic_msg(2, 0.5, 0.5)
+
+                self.too_fast_count = 0
+                self.sys_msg_pub.publish("Human walking too fast!")
+        else:
+            self.too_fast_count = 0
+
         # check if get stuck
-        if np.abs(self.measured_vel.linear.x - self.cmd_vel_smooth.linear.x) > self.vel_err_th:
+        if self.bumper_event.state == BumperEvent.PRESSED:
             self.stuck_count += 1
             if self.stuck_count >= self.stuck_count_limit:
                 # send haptic signal
@@ -277,7 +304,7 @@ class SimpleFollower:
                 self.stuck_count = 0
                 self.send_vel_cmd(0, 0, 0.5)
                 self.state = "GetStuck"
-                rospy.logwarn("Robot stuck!")
+                # rospy.logwarn("Robot stuck!")
                 self.sys_msg_pub.publish("Robot stuck!")
                 return
         else:
