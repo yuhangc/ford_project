@@ -16,6 +16,7 @@ from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
 from kobuki_msgs.msg import BumperEvent
 from kobuki_msgs.msg import Led
+from kobuki_msgs.msg import DigitalOutput
 
 from ford_project.msg import haptic_msg
 
@@ -155,9 +156,11 @@ class SimpleFollower:
         self.sys_msg_pub = rospy.Publisher("sys_message",
                                            String, queue_size=1)
 
-        # publisher to base LED
+        # publisher to base LED and digital output
         self.LED1_pub = rospy.Publisher("mobile_base/commands/led1",
                                         Led, queue_size=1)
+        self.digital_out_pub = rospy.Publisher("mobile_base/commands/digital_output",
+                                               DigitalOutput, queue_size=1)
 
     # call back functions
     def human_track_pose_cb(self, msg):
@@ -355,6 +358,14 @@ class SimpleFollower:
         # do teleoperation
         self.teleop()
 
+    # method for digital output
+    def digital_write(self, channel, value):
+        t_digital_out = DigitalOutput()
+        t_digital_out.mask[channel] = 1
+        t_digital_out.values[channel] = value
+
+        self.digital_out_pub.publish(t_digital_out)
+
     def teleop(self):
         # rospy.loginfo("in teleoperation")
         self.check_set_state()
@@ -420,18 +431,22 @@ class SimpleFollower:
             self.idle()
             current_state.data = 0
             self.LED1_pub.publish(Led.BLACK)
+            self.digital_write(0, 1)
         elif self.state == "Follow":
             self.follow()
             current_state.data = 1
             self.LED1_pub.publish(Led.GREEN)
+            self.digital_write(0, 1)
         elif self.state == "LostVision":
             self.lost_vision()
             current_state.data = 2
             self.LED1_pub.publish(Led.ORANGE)
+            self.digital_write(0, 1)
         elif self.state == "GetStuck":
             self.get_stuck()
             current_state.data = 3
             self.LED1_pub.publish(Led.RED)
+            self.digital_write(0, 0)
         elif self.state == "Teleop":
             self.teleop()
             current_state.data = 4
