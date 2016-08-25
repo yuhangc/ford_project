@@ -206,14 +206,14 @@ class SimpleHumanTracker:
 
         # print ell_center, phi, axes
 
-        # # fit a line
-        # X = np.vstack((sample_x, sample_depth))
-        # b = np.ones((num_sample, 1), np.float32)
-        # a = np.dot(np.linalg.pinv(X.transpose()), b)
-        # self.pos2d.theta = np.arctan2(a[0], a[1]) * 180 / 3.14159
+        # fit a line
+        X = np.vstack((sample_x, sample_depth))
+        b = np.ones((num_sample, 1), np.float32)
+        a = np.dot(np.linalg.pinv(X.transpose()), b)
+        self.pos2d.theta = np.arctan2(a[0], a[1]) * 180 / 3.14159
 
         # # find first principal component
-        X = np.vstack((sample_x, sample_depth))
+        # X = np.vstack((sample_x, sample_depth))
         # X = X.transpose()
         #
         # X_mean = X.mean(axis=0)
@@ -230,15 +230,15 @@ class SimpleHumanTracker:
         #     self.ellipse_param[0] = np.mean(sample_x)
         #     self.ellipse_param[1] = np.mean(sample_depth)
 
-        self.ellipse_param[0] = np.mean(sample_x)
-        self.ellipse_param[1] = np.mean(sample_depth) + 150
-
-        self.ellipse_param = fitEllipse.fit_ellipse(X.transpose(), self.ellipse_param, 2, 0.05, [100, 100, 0.2])
+        # self.ellipse_param[0] = np.mean(sample_x)
+        # self.ellipse_param[1] = np.mean(sample_depth) + 150
+        #
+        # self.ellipse_param = fitEllipse.fit_ellipse(X.transpose(), self.ellipse_param, 2, 0.05, [100, 100, 0.2])
 
         # update the figure
-        plt.clf()
-        plt.scatter(sample_x, sample_depth)
-        plt.axis([-500, 500, 500, 1500])
+        # plt.clf()
+        # plt.scatter(sample_x, sample_depth)
+        # plt.axis([-500, 500, 500, 1500])
 
         # a, b = axes
         # R = np.arange(0, 2*np.pi, 0.1)
@@ -254,15 +254,15 @@ class SimpleHumanTracker:
         # yy = np.arange(-200, 200, 2) * pc1[1] + X_mean[1]
         # plt.plot(xx, yy, 'r')
 
-        a = self.ellipse_param[3]
-        b = self.ellipse_param[4]
-        theta = self.ellipse_param[2]
-        R = np.arange(0, 2*np.pi, 0.1)
-        xx = self.ellipse_param[0] + a * np.cos(R) * np.cos(theta) - b * np.sin(R) * np.sin(theta)
-        yy = self.ellipse_param[1] + a * np.cos(R) * np.sin(theta) + b * np.sin(R) * np.cos(theta)
-        plt.plot(xx, yy, color='red')
-
-        plt.pause(0.01)
+        # a = self.ellipse_param[3]
+        # b = self.ellipse_param[4]
+        # theta = self.ellipse_param[2]
+        # R = np.arange(0, 2*np.pi, 0.1)
+        # xx = self.ellipse_param[0] + a * np.cos(R) * np.cos(theta) - b * np.sin(R) * np.sin(theta)
+        # yy = self.ellipse_param[1] + a * np.cos(R) * np.sin(theta) + b * np.sin(R) * np.cos(theta)
+        # plt.plot(xx, yy, color='red')
+        #
+        # plt.pause(0.01)
 
         # calculate velocity based on discretization
         if self.status == "Find":
