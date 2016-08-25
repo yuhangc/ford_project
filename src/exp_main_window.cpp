@@ -70,8 +70,9 @@ void ExpMainWindow::Init()
     connect(&m_update_timer, SIGNAL(timeout()), this, SLOT(UpdateGUIInfo()));
     m_update_timer.start(30);
 
-    // setup key bindings
-
+    // data saving flag
+    this->flag_start_data_saving = false;
+    this->file_count = 0;
 }
 
 // ============================================================================
@@ -79,6 +80,12 @@ void ExpMainWindow::UpdateGUIInfo()
 {
     // spin ros and check shutdown
     ros::spinOnce();
+
+    // record data if necessary
+    if (this->flag_start_data_saving) {
+        this->data_file << (ros::Time().now().toSec() - this->time_start_data_saving)
+                           << ", " << this->robot_state << std::endl;
+    }
 
     if (ros::isShuttingDown()) {
         this->close();
@@ -88,6 +95,8 @@ void ExpMainWindow::UpdateGUIInfo()
 // ============================================================================
 void ExpMainWindow::robot_state_callback(const std_msgs::Int8::ConstPtr &state_msg)
 {
+    this->robot_state = state_msg->data;
+
     switch (state_msg->data)
     {
     case 0:
@@ -359,4 +368,22 @@ void ExpMainWindow::on_button_start_condition_clicked()
 
         break;
     }
+
+    // open file to save data and set data saving flag to be true
+    this->file_count ++;
+    char file_name[50];
+    std::sprintf(file_name, "/home/yuhangche/Desktop/data/test%d.txt", this->file_count);
+
+    this->data_file.open(file_name);
+    this->flag_start_data_saving = true;
+
+    this->time_start_data_saving = ros::Time().now().toSec();
+}
+
+// ============================================================================
+void ExpMainWindow::on_button_stop_record_clicked()
+{
+    // close file and set data saving flag to false
+    this->data_file.close();
+    this->flag_start_data_saving = false;
 }

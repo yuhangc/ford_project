@@ -1,6 +1,7 @@
 #ifndef EXP_MAIN_WINDOW_H
 #define EXP_MAIN_WINDOW_H
 
+#include <fstream>
 #include <QMainWindow>
 #include <QTimer>
 
@@ -78,6 +79,15 @@ private:
     geometry_msgs::Twist cmd_vel_goal;
     geometry_msgs::Twist cmd_vel;
 
+    // variable for data saving
+    std::ofstream data_file;
+    bool flag_start_data_saving;
+
+    double time_start_data_saving;
+    int robot_state;
+
+    int file_count;
+
     // callback functions
     void robot_state_callback(const std_msgs::Int8::ConstPtr& state_msg);
     void robot_odom_callback(const nav_msgs::Odometry::ConstPtr& odom_msg);
@@ -111,6 +121,7 @@ private slots:
     void on_combo_haptic_mag_currentIndexChanged(int index);
     void on_combo_exp_condition_currentIndexChanged(int index);
     void on_button_start_condition_clicked();
+    void on_button_stop_record_clicked();
 };
 
 #endif // EXP_MAIN_WINDOW_H
