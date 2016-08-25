@@ -143,7 +143,7 @@ class SimpleFollower:
                                                       Int8, self.set_cmd_state_cb)
         # subscriber to haptic tether control
         self.follower_mode_control_sub = rospy.Subscriber("state_control/set_follower_mode",
-                                                          Bool, self.follower_mode_control_cb)
+                                                          Int8, self.follower_mode_control_cb)
 
         # subscribe to the smoothed velocity cmd
         self.cmd_vel_smooth_sub = rospy.Subscriber("cmd_vel_mux/input/teleop",
