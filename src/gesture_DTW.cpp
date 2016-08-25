@@ -20,7 +20,7 @@ GestureDTW::GestureDTW()
     this->time_debounce = 0.5;
     this->time_gesture_start = 0;
 
-    double vals[] = {1.5, 1.5, 1.5, 1.5, 1.5, 1.5};
+    double vals[] = {1.6, 1.6, 1.6, 1.6, 1.8, 1.8};
     this->rej_corr.assign(vals, vals+this->num_gestures);
 
     // flags
