@@ -6,6 +6,8 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 
+import fitEllipse
+
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Pose2D
 from geometry_msgs.msg import Vector3
@@ -59,7 +61,7 @@ class SimpleHumanTracker:
         self.fh = float(self.height) / 2.0 / np.tan(self.fov / 2.0)
 
         # number of points for fitting
-        self.num_fitting_point = 100
+        self.num_fitting_point = 500
 
         self.rgb_image = np.zeros((self.height, self.width, 3), np.uint8)
         self.depth_image = np.zeros((self.height, self.width), np.uint16)
@@ -70,6 +72,10 @@ class SimpleHumanTracker:
         self.vel2d = Vector3()
         self.vel2d_old = Vector3()
         self.status = "Lost"
+
+        # variables for fitting ellipse
+        self.flag_first_fit = True
+        self.ellipse_param = [0.0, 0.0, 0.0, 200, 150]
 
     # rgb image callback
     def rgb_image_callback(self, msg):
@@ -166,18 +172,17 @@ class SimpleHumanTracker:
         if M['m00'] > 0:
             cx = M['m10'] / M['m00']
         else:
-            cx = 0
+            cx = 0200
 
         self.pos2d.x = float(cx - self.width / 2) * avg_depth / self.fw
         self.pos2d.y = avg_depth
 
         # find the orientation
-        row_start = max(int(M['m01'] / M['m00']) - 5, 0)
-        row_end = min(int(M['m01'] / M['m00']) + 5, self.height)
+        row_start = 0  # max(int(M['m01'] / M['m00']) - 200, 0)
+        row_end = min(int(M['m01'] / M['m00']) + 0, self.height)
 
         # find the non-zero points within the range
-        temp = self.mask[row_start:row_end, :]
-        nonzero_id = np.nonzero(self.mask[row_start:row_end, :])
+        nonzero_id = np.nonzero(self.mask[row_start:row_end, :] * self.depth_image[row_start:row_end, :])
         num_nonzero = np.size(nonzero_id, 1)
 
         # sample the non-zero points
@@ -190,15 +195,74 @@ class SimpleHumanTracker:
         sample_x = (nonzero_id[1][sample_id] - (self.width / 2)) * sample_depth / self.fw
         num_sample = np.size(sample_x)
 
-        # plt.scatter(sample_x, sample_depth)
+        # # fit a ellipse
+        # x_mean = np.mean(sample_x)
+        # depth_mean = np.mean(sample_depth)
+        #
+        # ell = fitEllipse.fitEllipse((sample_x - x_mean) / 1000.0, (sample_depth - depth_mean) / 1000.0)
+        # ell_center = fitEllipse.ellipse_center(ell) * 1000
+        # phi = fitEllipse.ellipse_angle_of_rotation2(ell)
+        # axes = fitEllipse.ellipse_axis_length(ell) * 1000
 
-        sample_x_t = np.transpose(sample_x)
-        # fit a line
+        # print ell_center, phi, axes
+
+        # # fit a line
+        # X = np.vstack((sample_x, sample_depth))
+        # b = np.ones((num_sample, 1), np.float32)
+        # a = np.dot(np.linalg.pinv(X.transpose()), b)
+        # self.pos2d.theta = np.arctan2(a[0], a[1]) * 180 / 3.14159
+
+        # # find first principal component
         X = np.vstack((sample_x, sample_depth))
-        b = np.ones((num_sample, 1), np.float32)
-        a = np.dot(np.linalg.pinv(X.transpose()), b)
+        # X = X.transpose()
+        #
+        # X_mean = X.mean(axis=0)
+        # X = X - X_mean
+        # # print np.dot(X.T, X)
+        #
+        # eigenvectors, eigenvalues, V = np.linalg.svd(X, full_matrices=False)
+        # pc1 = V[0]
+        # pc1 /= np.linalg.norm(pc1)
 
-        self.pos2d.theta = np.arctan2(a[0], a[1]) * 180 / 3.14159
+        # fit ellipse with new method
+        # if self.flag_first_fit:
+        #     self.flag_first_fit = False
+        #     self.ellipse_param[0] = np.mean(sample_x)
+        #     self.ellipse_param[1] = np.mean(sample_depth)
+
+        self.ellipse_param[0] = np.mean(sample_x)
+        self.ellipse_param[1] = np.mean(sample_depth) + 150
+
+        self.ellipse_param = fitEllipse.fit_ellipse(X.transpose(), self.ellipse_param, 2, 0.05, [100, 100, 0.2])
+
+        # update the figure
+        plt.clf()
+        plt.scatter(sample_x, sample_depth)
+        plt.axis([-500, 500, 500, 1500])
+
+        # a, b = axes
+        # R = np.arange(0, 2*np.pi, 0.1)
+        # xx = ell_center[0] + x_mean + a * np.cos(R) * np.cos(phi) - b * np.sin(R) * np.sin(phi)
+        # yy = ell_center[1] + depth_mean + a * np.cos(R) * np.sin(phi) + b * np.sin(R) * np.cos(phi)
+        # plt.plot(xx, yy, color='red')
+
+        # xx = np.arange(-300, 300, 10)
+        # yy = (1 - a[0] * xx) / a[1]
+        # plt.plot(xx, yy, color='red')
+
+        # xx = np.arange(-200, 200, 2) * pc1[0] + X_mean[0]
+        # yy = np.arange(-200, 200, 2) * pc1[1] + X_mean[1]
+        # plt.plot(xx, yy, 'r')
+
+        a = self.ellipse_param[3]
+        b = self.ellipse_param[4]
+        theta = self.ellipse_param[2]
+        R = np.arange(0, 2*np.pi, 0.1)
+        xx = self.ellipse_param[0] + a * np.cos(R) * np.cos(theta) - b * np.sin(R) * np.sin(theta)
+        yy = self.ellipse_param[1] + a * np.cos(R) * np.sin(theta) + b * np.sin(R) * np.cos(theta)
+        plt.plot(xx, yy, color='red')
+
+        plt.pause(0.01)
 
         # calculate velocity based on discretization
         if self.status == "Find":
@@ -232,6 +296,8 @@ if __name__ == "__main__":
 
     rospy.sleep(1)
     rate = rospy.Rate(10)
+
+    plt.ion()
     while not rospy.is_shutdown():
         tracker.process_image()
         rate.sleep()
