@@ -51,6 +51,7 @@ void ExpMainWindow::Init()
 
     // initialize publishers
     this->set_robot_state_pub = this->nh.advertise<std_msgs::Int8>("/state_control/set_state", 1);
+    this->set_condition_pub = this->nh.advertise<std_msgs::Int8>("/state_control/set_follower_mode", 1);
     this->haptic_control_pub = this->nh.advertise<ford_project::haptic_msg>("/haptic_control", 1);
 
     // get parameters
@@ -304,6 +305,58 @@ void ExpMainWindow::on_combo_haptic_mag_currentIndexChanged(int index)
         break;
     case 2:
         this->haptic_signal.amplitude = 1.8;
+        break;
+    }
+}
+
+// ============================================================================
+void ExpMainWindow::on_combo_exp_condition_currentIndexChanged(int index)
+{
+    // 0 - Teleoperation
+    // 1 - Autonomous
+    // 2 - Haptic Tether
+    this->set_condition = index;
+}
+
+// ============================================================================
+void ExpMainWindow::on_button_start_condition_clicked()
+{
+    std_msgs::Int8 t_set_condition;
+    switch (this->set_condition) {
+    // teleoperation
+    case 0:
+        // set state to teleoperation
+        this->set_state.data = 4;
+        this->set_robot_state_pub.publish(this->set_state);
+
+        // set mode to teleoperation
+        t_set_condition.data = 0;
+        this->set_condition_pub.publish(t_set_condition);
+
+        break;
+    // autonomous
+    case 1:
+        // set mode to autonomous first
+        t_set_condition.data = 1;
+        this->set_condition_pub.publish(t_set_condition);
+
+        // delay 0.1 second and then set state to idle
+        ros::Duration(0.1).sleep();
+        this->set_state.data = 0;
+        this->set_robot_state_pub.publish(this->set_state);
+
+        break;
+    // haptic tether
+    case 2:
+        // set mode to tether condition first
+        t_set_condition.data = 2;
+        this->set_condition_pub.publish(t_set_condition);
+
+        // delay 0.1 second and then set state to idle
+        ros::Duration(0.1).sleep();
+        this->set_state.data = 0;
+        this->set_robot_state_pub.publish(this->set_state);
+
         break;
     }
 }

@@ -49,6 +49,12 @@ class SimpleFollower:
         self.state = rospy.get_param("~state_init", "Idle")
         self.cmd_state = rospy.get_param("~cmd_state_init", "Idle")
 
+        # flag that indicates whether haptic tether is enables
+        # 0 - Teleoperation
+        # 1 - Autonomous
+        # 2 - Haptic Tether
+        self.set_follower_mode = 2
+
         # timer for state machine
         self.cmd_state_timer = rospy.get_time()
         self.cmd_state_period = 0.0
@@ -135,6 +141,9 @@ class SimpleFollower:
                                                   Int8, self.set_state_cb)
         self.cmd_state_control_sub = rospy.Subscriber("cmd_state_control/set_state",
                                                       Int8, self.set_cmd_state_cb)
+        # subscriber to haptic tether control
+        self.follower_mode_control_sub = rospy.Subscriber("state_control/set_follower_mode",
+                                                          Bool, self.follower_mode_control_cb)
 
         # subscribe to the smoothed velocity cmd
         self.cmd_vel_smooth_sub = rospy.Subscriber("cmd_vel_mux/input/teleop",
@@ -163,6 +172,9 @@ class SimpleFollower:
                                                DigitalOutput, queue_size=1)
 
     # call back functions
+    def follower_mode_control_cb(self, follower_mode_control_msg):
+        self.set_follower_mode = follower_mode_control_msg.data
+
     def human_track_pose_cb(self, msg):
         self.human_pose = msg
 
@@ -240,7 +252,7 @@ class SimpleFollower:
         else:
             new_msg.direction = 3   # backward
 
-        new_msg.amplitude = self.human_pose.y / self.haptic_amp_thresh
+        new_msg.amplitude = 1.5  # self.human_pose.y / self.haptic_amp_thresh
 
         # send haptic control message
         new_msg.repetition = rep
@@ -281,8 +293,9 @@ class SimpleFollower:
         if self.track_status == "Lost":
             self.lost_vision_count += 1
             if self.lost_vision_count >= self.lost_vision_count_limit:
-                # send haptic signal
-                self.send_haptic_msg(3, 1.0, 1.0)
+                if self.set_follower_mode == 2:
+                    # send haptic signal
+                    self.send_haptic_msg(3, 1.0, 1.0)
 
                 # set robot to stop and go to state lost vision
                 self.lost_vision_count = 0
@@ -298,8 +311,9 @@ class SimpleFollower:
         if np.abs(self.cmd_vel_smooth.linear.x) > self.turtlebot_vel_max:
             self.too_fast_count += 1
             if self.too_fast_count >= self.too_fast_count_limit:
-                # send haptic signal
-                self.send_haptic_msg(2, 0.5, 0.5)
+                if self.set_follower_mode == 2:
+                    # send haptic signal
+                    self.send_haptic_msg(2, 0.5, 0.5)
 
                 self.too_fast_count = 0
                 self.sys_msg_pub.publish("Human walking too fast!")
@@ -310,8 +324,9 @@ class SimpleFollower:
         if self.bumper_event.state == BumperEvent.PRESSED:
             self.stuck_count += 1
             if self.stuck_count >= self.stuck_count_limit:
-                # send haptic signal
-                self.send_haptic_msg(3, 1.0, 1.0)
+                if self.set_follower_mode == 2:
+                    # send haptic signal
+                    self.send_haptic_msg(3, 1.0, 1.0)
 
                 self.stuck_count = 0
                 self.send_vel_cmd(0, 0, 0.5)
@@ -342,7 +357,8 @@ class SimpleFollower:
                 self.state = "Follow"
 
         # do teleop
-        self.teleop()
+        if self.set_follower_mode == 2:
+            self.teleop()
 
     def get_stuck(self):
         # check if the path is clear??
@@ -356,7 +372,8 @@ class SimpleFollower:
                     self.state = "Follow"
 
         # do teleoperation
-        self.teleop()
+        if self.set_follower_mode == 2:
+            self.teleop()
 
     # method for digital output
     def digital_write(self, channel, value):
@@ -368,7 +385,10 @@ class SimpleFollower:
 
     def teleop(self):
         # rospy.loginfo("in teleoperation")
-        self.check_set_state()
+        if self.set_follower_mode != 0:
+            # do not switch to other states when in teleoperation condition
+            self.check_set_state()
+
         if self.human_input_mode == "gesture_control":
             if self.human_input_gesture < 0:
                 gesture = "do_nothing"

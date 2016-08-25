@@ -58,11 +58,15 @@ private:
 
     // publishers
     ros::Publisher set_robot_state_pub;
+    ros::Publisher set_condition_pub;
     ros::Publisher haptic_control_pub;
     ros::Publisher cmd_vel_pub;
 
     // set state
     std_msgs::Int8 set_state;
+
+    // set condition
+    int set_condition;
 
     // haptic signal
     ford_project::haptic_msg haptic_signal;
@@ -105,6 +109,8 @@ private slots:
     void on_spinBox_haptic_off_valueChanged(double arg1);
     void on_button_send_haptic_clicked();
     void on_combo_haptic_mag_currentIndexChanged(int index);
+    void on_combo_exp_condition_currentIndexChanged(int index);
+    void on_button_start_condition_clicked();
 };
 
 #endif // EXP_MAIN_WINDOW_H
