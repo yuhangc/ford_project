@@ -113,8 +113,8 @@ class SimpleFollower:
         # variables for tilt control
         self.roll_to_linear_scale = rospy.get_param("~roll_to_linear_scale", 1.0)
         self.pitch_to_angular_scale = rospy.get_param("~pitch_to_angular_scale", 3.0)
-        self.pitch_deadband = rospy.get_param("~pitch_deadband", 0.3)
-        self.roll_deadband = rospy.get_param("~roll_deadband", 0.3)
+        self.pitch_deadband = rospy.get_param("~pitch_deadband", 0.4)
+        self.roll_deadband = rospy.get_param("~roll_deadband", 0.5)
         self.pitch_offset = rospy.get_param("pitch_offset", 0.2)
         self.roll_offset = rospy.get_param("roll_offset", 0.2)
         self.roll_center_offset = rospy.get_param("roll_center_offset", 0.1)
@@ -148,10 +148,6 @@ class SimpleFollower:
         # subscriber to haptic tether control
         self.follower_mode_control_sub = rospy.Subscriber("state_control/set_follower_mode",
                                                           Int8, self.follower_mode_control_cb)
-
-        # subscribe to the smoothed velocity cmd
-        self.cmd_vel_smooth_sub = rospy.Subscriber("cmd_vel_mux/input/teleop",
-                                                   Twist, self.cmd_vel_smooth_cb)
 
         # subscribe to the bumper event
         self.bumper_event_sub = rospy.Subscriber("mobile_base/events/bumper",
@@ -191,8 +187,6 @@ class SimpleFollower:
     def human_input_tilt_cb(self, msg):
         self.human_input_tilt = msg
         self.human_input_tilt.x += self.roll_center_offset
-        # rospy.loginfo("tilt angles are %f %f %f", self.human_input_tilt[0],
-        #               self.human_input_tilt[1], self.human_input_tilt[2])
 
     def human_input_gesture_cb(self, msg):
         self.human_input_gesture = msg.data
