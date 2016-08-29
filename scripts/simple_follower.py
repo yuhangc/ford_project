@@ -68,13 +68,16 @@ class SimpleFollower:
         self.stuck_count_limit = rospy.get_param("~stuck_count_limit", 25)
         self.lost_vision_count_limit = rospy.get_param("~lost_vision_count_limit", 25)
         self.too_fast_count_limit = rospy.get_param("~too_fast_count_limit", 25)
-        self.vel_err_th = rospy.get_param("~velocity_error_threshold", 0.2)
         self.turtlebot_vel_max = rospy.get_param("~turtlebot_vel_max", 0.7)
 
         # desired velocity for publish
         self.cmd_vel = Twist()
-        self.cmd_vel_smooth = Twist()
         self.measured_vel = Twist()
+
+        # teleoperation parameters
+        self.tele_vel = Twist()
+        self.tele_vel.linear.x = rospy.get_param("~default_teleop_vel_linear", 0.3)
+        self.tele_vel_inc_linear = rospy.get_param("~telop_vel_increment_linear", 0.01)
 
         # bumper variable
         self.bumper_event = BumperEvent()
@@ -88,6 +91,7 @@ class SimpleFollower:
         self.human_input_tilt = Vector3()  # roll, pitch, yaw
         self.human_input_gesture = -1  # 10 means no gesture input
 
+        self.flag_button_pressed = False
         self.human_input_mode = rospy.get_param("~human_input_mode", "tilt_control")
 
         # state machine control
@@ -201,9 +205,9 @@ class SimpleFollower:
 
     def human_input_mode_cb(self, msg):
         if msg.data:
-            self.human_input_mode = "tilt_control"
+            self.flag_button_pressed = True
         else:
-            self.human_input_mode = "gesture_control"
+            self.flag_button_pressed = False
 
     def set_state_cb(self, msg):
         self.set_state = msg.data
@@ -216,9 +220,6 @@ class SimpleFollower:
 
     def odom_cb(self, msg):
         self.measured_vel = msg.twist.twist
-
-    def cmd_vel_smooth_cb(self, cmd_vel_msg):
-        self.cmd_vel_smooth = cmd_vel_msg
 
     def bumper_event_cb(self, bumper_event_msg):
         self.bumper_event = bumper_event_msg
@@ -308,7 +309,7 @@ class SimpleFollower:
             self.lost_vision_count = 0
 
         # check if human is walking too fast
-        if np.abs(self.cmd_vel_smooth.linear.x) > self.turtlebot_vel_max:
+        if np.abs(self.cmd_vel.linear.x) > self.turtlebot_vel_max:
             self.too_fast_count += 1
             if self.too_fast_count >= self.too_fast_count_limit:
                 if self.set_follower_mode == 2:
@@ -389,43 +390,24 @@ class SimpleFollower:
             # do not switch to other states when in teleoperation condition
             self.check_set_state()
 
-        if self.human_input_mode == "gesture_control":
-            if self.human_input_gesture < 0:
-                gesture = "do_nothing"
-            else:
-                gesture = gesture_dict[self.human_input_gesture]
-
-            if gesture == "forward":
-                self.send_vel_cmd(-0.5, 0, 0.5)
-            elif gesture == "backward":
-                self.send_vel_cmd(0.5, 0, 0.5)
-            elif gesture == "right_cw":
-                self.send_vel_cmd(0, -0.5, 0.5)
-            elif gesture == "left_ccw":
-                self.send_vel_cmd(0, 0.5, 0.5)
-            else:
-                self.send_vel_cmd(0, 0)
-
-            self.human_input_gesture = -1
-            print "gesture control"
-        else:
+        if self.flag_button_pressed:
             if self.human_input_tilt.x > self.roll_deadband:
-                vx = self.roll_to_linear_scale * (self.human_input_tilt.x - self.roll_offset)
+                if self.tele_vel.linear.x < self.turtlebot_vel_max:
+                    self.tele_vel.linear.x += self.tele_vel_inc_linear
             elif self.human_input_tilt.x < -self.roll_deadband:
-                vx = self.roll_to_linear_scale * (self.human_input_tilt.x + self.roll_offset)
-            else:
-                vx = 0
+                if self.tele_vel.linear.x > -self.turtlebot_vel_max:
+                    self.tele_vel.linear.x -= self.tele_vel_inc_linear
 
             if self.human_input_tilt.y > self.pitch_deadband:
-                omg = self.pitch_to_angular_scale * (self.human_input_tilt.y - self.pitch_offset)
+                self.tele_vel.angular.z = self.pitch_to_angular_scale * (self.human_input_tilt.y - self.pitch_offset)
             elif self.human_input_tilt.y < -self.pitch_deadband:
-                omg = self.pitch_to_angular_scale * (self.human_input_tilt.y + self.pitch_offset)
+                self.tele_vel.angular.z = self.pitch_to_angular_scale * (self.human_input_tilt.y + self.pitch_offset)
             else:
-                omg = 0
+                self.tele_vel.angular.z = 0
 
-            self.send_vel_cmd(vx, omg)
-            print "tilt control"
-            # rospy.loginfo("cmd_vel_sent!")
+            self.send_vel_cmd(self.tele_vel.linear.x, self.tele_vel.angular.z)
+        else:
+            self.send_vel_cmd(0, 0)
 
     def update(self):
         # # update loop counter
