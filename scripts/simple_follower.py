@@ -60,7 +60,6 @@ class SimpleFollower:
         self.cmd_state_period = 0.0
 
         # loop counters
-        self.loop_count = 0
         self.stuck_count = 0
         self.lost_vision_count = 0
         self.too_fast_count = 0
@@ -92,6 +91,7 @@ class SimpleFollower:
         self.human_input_gesture = -1  # 10 means no gesture input
 
         self.flag_button_pressed = False
+        self.flag_latch_cmd_vel = False
         self.human_input_mode = rospy.get_param("~human_input_mode", "tilt_control")
 
         # state machine control
@@ -112,9 +112,9 @@ class SimpleFollower:
 
         # variables for tilt control
         self.roll_to_linear_scale = rospy.get_param("~roll_to_linear_scale", 1.0)
-        self.pitch_to_angular_scale = rospy.get_param("~pitch_to_angular_scale", 3.0)
+        self.pitch_to_angular_scale = rospy.get_param("~pitch_to_angular_scale", -3.0)
         self.pitch_deadband = rospy.get_param("~pitch_deadband", 0.4)
-        self.roll_deadband = rospy.get_param("~roll_deadband", 0.5)
+        self.roll_deadband = rospy.get_param("~roll_deadband", 0.4)
         self.pitch_offset = rospy.get_param("pitch_offset", 0.2)
         self.roll_offset = rospy.get_param("roll_offset", 0.2)
         self.roll_center_offset = rospy.get_param("roll_center_offset", 0.1)
@@ -385,12 +385,19 @@ class SimpleFollower:
             self.check_set_state()
 
         if self.flag_button_pressed:
-            if self.human_input_tilt.x > self.roll_deadband:
-                if self.tele_vel.linear.x < self.turtlebot_vel_max:
+            if self.flag_latch_cmd_vel:
+                if self.human_input_tilt.x > self.roll_deadband and self.tele_vel.linear.x < self.turtlebot_vel_max:
                     self.tele_vel.linear.x += self.tele_vel_inc_linear
-            elif self.human_input_tilt.x < -self.roll_deadband:
-                if self.tele_vel.linear.x > -self.turtlebot_vel_max:
+                elif self.human_input_tilt.x < -self.roll_deadband and self.tele_vel.linear.x > -self.turtlebot_vel_max:
                     self.tele_vel.linear.x -= self.tele_vel_inc_linear
+                vx = self.tele_vel.linear.x
+            else:
+                if self.human_input_tilt.x > self.roll_deadband:
+                    vx = self.roll_to_linear_scale * (self.human_input_tilt.x - self.roll_offset)
+                elif self.human_input_tilt.x < -self.roll_deadband:
+                    vx = self.roll_to_linear_scale * (self.human_input_tilt.x + self.roll_offset)
+                else:
+                    vx = 0
 
             if self.human_input_tilt.y > self.pitch_deadband:
                 self.tele_vel.angular.z = self.pitch_to_angular_scale * (self.human_input_tilt.y - self.pitch_offset)
@@ -399,27 +406,11 @@ class SimpleFollower:
             else:
                 self.tele_vel.angular.z = 0
 
-            self.send_vel_cmd(self.tele_vel.linear.x, self.tele_vel.angular.z)
+            self.send_vel_cmd(vx, self.tele_vel.angular.z)
         else:
             self.send_vel_cmd(0, 0)
 
     def update(self):
-        # # update loop counter
-        # self.loop_count += 1
-        # if self.loop_count == 10:
-        #     # rospy.logwarn("display image!")
-        #     img = np.zeros((128, 128, 3), np.uint8)
-        #     if self.state == "Idle":
-        #         cv2.circle(img, (64, 64), 63, (0, 200, 200), -1)
-        #     elif self.state == "Follow":
-        #         cv2.circle(img, (64, 64), 63, (0, 200, 0), -1)
-        #     elif self.state == "LostVision":
-        #         cv2.circle(img, (64, 64), 63, (0, 0, 200), -1)
-        #     elif self.state == "GetStuck":
-        #         cv2.circle(img, (64, 64), 63, (200, 0, 200), -1)
-        #     cv2.imshow("status", img)
-        #     cv2.waitKey(3)
-        #     self.loop_count = 0
 
         # run over states
         current_state = Int8()
