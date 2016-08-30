@@ -2,14 +2,12 @@
 
 import rospy
 import numpy as np
-import cv2
 
 from tf import transformations
 
 from geometry_msgs.msg import Pose2D
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Vector3
-from geometry_msgs.msg import Quaternion
 from std_msgs.msg import String
 from std_msgs.msg import Int8
 from std_msgs.msg import Bool
@@ -33,7 +31,7 @@ cmd_states_all = {0: "Idle",
 input_mode_all = {1: "gesture_control",
                   0: "tilt_control"}
 
-gesture_dict = {0: "left_ccw",
+gesture_dict = {0: "twist",
                 1: "right_cw",
                 2: "forward",
                 3: "backward",
@@ -196,10 +194,11 @@ class SimpleFollower:
         self.human_input_gesture = msg.data
 
         # check if set to start/stop
-        if gesture_dict[self.human_input_gesture] == "start":
-            self.set_state = 1
-        elif gesture_dict[self.human_input_gesture] == "stop":
-            self.set_state = 0
+        if gesture_dict[self.human_input_gesture] == "twist":
+            if self.state == "Idle":
+                self.set_state = 1
+            else:
+                self.set_state = 0
 
     def human_input_mode_cb(self, msg):
         if msg.data:

@@ -208,7 +208,7 @@ void ExpMainWindow::gesture_rec_callback(const std_msgs::Int8::ConstPtr &gesture
         ui->lineEdit_gesture_rec->setText("Recognized Gesgure: Backward");
         break;
     case 0:
-        ui->lineEdit_gesture_rec->setText("Recognized Gesgure: Turn Left");
+        ui->lineEdit_gesture_rec->setText("Recognized Gesgure: Twist");
         break;
     case 1:
         ui->lineEdit_gesture_rec->setText("Recognized Gesgure: Turn Right");
