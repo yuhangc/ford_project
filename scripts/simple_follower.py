@@ -61,9 +61,11 @@ class SimpleFollower:
 
         # loop counters
         self.stuck_count = 0
+        self.stuck_backup_count = 0
         self.lost_vision_count = 0
         self.too_fast_count = 0
 
+        self.stuck_backup_count_limit = 50
         self.stuck_count_limit = rospy.get_param("~stuck_count_limit", 25)
         self.lost_vision_count_limit = rospy.get_param("~lost_vision_count_limit", 25)
         self.too_fast_count_limit = rospy.get_param("~too_fast_count_limit", 25)
@@ -109,6 +111,8 @@ class SimpleFollower:
 
         self.dist_range_min = rospy.get_param("~dist_range_min", 0.3)
         self.dist_range_max = rospy.get_param("~dist_range_max", 5.0)
+
+        self.dist_stuck_resume_max = rospy.get_param("~dist_stuck_resume_max", 1.0)
 
         # variables for tilt control
         self.roll_to_linear_scale = rospy.get_param("~roll_to_linear_scale", 1.0)
@@ -323,8 +327,8 @@ class SimpleFollower:
                     # send haptic signal
                     self.send_haptic_msg(3, 1.0, 1.0)
 
-                self.stuck_count = 0
-                self.send_vel_cmd(0, 0, 0.5)
+                self.stuck_backup_count = 0
+                self.send_vel_cmd(-0.5, 0, 1.0)
                 self.state = "GetStuck"
                 # rospy.logwarn("Robot stuck!")
                 self.sys_msg_pub.publish("Robot stuck!")
@@ -354,21 +358,35 @@ class SimpleFollower:
         # do teleop
         if self.set_follower_mode == 2:
             self.teleop()
+        else:
+            self.check_set_state()
 
     def get_stuck(self):
-        # check if the path is clear??
-        # right now just wait for start follow signal
-        if self.set_state == 1:
-            if self.track_status == "Find":
+        # backup and try to follow again
+        if self.stuck_backup_count < self.stuck_backup_count_limit:
+            self.stuck_backup_count += 1
+        else:
+            # check if human is within distance
+            if self.track_status == "Find" and self.human_pose.y <= self.dist_stuck_resume_max:
                 rospy.logwarn('Prepare to switch to follow')
-                self.sys_msg_pub.publish("Prepare to switch to follow")
-                if self.dist_range_min < self.human_pose.y < self.dist_range_max:
-                    self.set_state = -1
-                    self.state = "Follow"
+                self.sys_msg_pub.publish("Continue to follow")
+
+                self.state = "Follow"
+
+            # also can be set to follow manually
+            if self.set_state == 1:
+                if self.track_status == "Find":
+                    rospy.logwarn('Prepare to switch to follow')
+                    self.sys_msg_pub.publish("Prepare to switch to follow")
+                    if self.dist_range_min < self.human_pose.y < self.dist_range_max:
+                        self.set_state = -1
+                        self.state = "Follow"
 
         # do teleoperation
         if self.set_follower_mode == 2:
             self.teleop()
+        else:
+            self.check_set_state()
 
     # method for digital output
     def digital_write(self, channel, value):
