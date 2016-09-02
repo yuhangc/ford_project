@@ -1,0 +1,8 @@
+<launch>
+  <node pkg="ford_project" type="vision_aruco" name="vision_aruco">
+  	<param name="camera_info_file" value="$(find ford_project)/camera_calibration/kinect_rgb.yml"/>
+  </node>
+  <!--node pkg="ford_project" type="gesture_DTW" name="gesture_detector">
+  	<param name="gesture_data_path" value="$(find ford_project)/gesture_data"/>
+  </node-->
+</launch>

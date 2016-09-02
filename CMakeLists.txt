@@ -6,8 +6,12 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  geometry_msgs
+  sensor_msgs
+
   message_generation
   cmake_modules
+  cv_bridge
 )
 
 find_package(Eigen REQUIRED)
@@ -59,6 +63,14 @@ catkin_package(
 find_package(Qt5Widgets REQUIRED)
 include_directories(${Qt5Widgets_INCLUDES})
 
+## specify the aruco package and directories
+find_package(aruco REQUIRED)
+include_directories(${aruco_INCLUDE_DIRS})
+
+## specify openCV package and directories
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
@@ -72,6 +84,10 @@ include_directories(
 
 link_directories(external/Sensoray826)
 link_directories(external/MC-USB3101)
+link_directories(${aruco_LIB_DIR})
+
+# set c++ compiler options
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 # set sources code and headers for IMU manager
 set(IMU_MANAGER_SOURCES
@@ -124,6 +140,15 @@ set(EXP_WINDOW_FORMS
     ui/exp_main_window.ui
 )
 
+# set source, header for the aruco vision tracking node
+set(VISION_ARUCO_SOURCES
+    src/vision_aruco.cpp
+)
+
+set(VISION_ARUCO_HEADERS
+    include/ford_project/vision_aruco.h
+)
+
 ## Declare a C++ executable
 add_executable(imu_manager ${IMU_MANAGER_SOURCES} ${IMU_MANAGER_HEADERS})
 target_link_libraries(imu_manager ${catkin_LIBRARIES})
@@ -136,6 +161,9 @@ target_link_libraries(haptic_USB ${catkin_LIBRARIES} usb-1.0 hidapi-libusb mccus
 
 add_executable(gesture_DTW ${GESTURE_SOURCES} ${GESTURE_HEADERS})
 target_link_libraries(gesture_DTW ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
+
+add_executable(vision_aruco ${VISION_ARUCO_SOURCES} ${VISION_ARUCO_HEADERS})
+target_link_libraries(vision_aruco ${catkin_LIBRARIES} ${aruco_LIBS} ${OpenCV_LIBRARIES})
 
 # compile the experiment main window application
 qt5_wrap_cpp(MOC_SOURCES ${EXP_WINDOW_HEADERS})
