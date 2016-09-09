@@ -35,6 +35,7 @@ private:
     // subscriber and publisher
     ros::Subscriber m_camera_rgb_sub;
     ros::Publisher m_human_pose_pub;
+    ros::Publisher m_human_vel_pub;
     ros::Publisher m_tracking_status_pub;
 
     // Aruco marker detector
@@ -51,8 +52,9 @@ private:
     // wether the marker is seen
     bool m_marker_detected[NUM_MARKER];
 
-    // detected body pose
+    // detected body pose and velocity
     geometry_msgs::Pose2D m_body_pose;
+    geometry_msgs::Vector3 m_body_vel;
 
     // tracking status
     std_msgs::String m_tracking_status;

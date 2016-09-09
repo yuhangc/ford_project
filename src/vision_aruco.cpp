@@ -35,6 +35,7 @@ ArucoTracker::ArucoTracker()
 
     // initialize publishers and subscribers
     this->m_human_pose_pub = this->nh.advertise<geometry_msgs::Pose2D>("tracking/human_pos2d", 1);
+    this->m_human_vel_pub = this->nh.advertise<geometry_msgs::Vector3>("tracking/human_vel2d", 1);
     this->m_tracking_status_pub = this->nh.advertise<std_msgs::String>("tracking/status", 1);
     this->m_camera_rgb_sub = this->nh.subscribe<sensor_msgs::Image>("/camera/rgb/image_raw", 1,
                                                                     &ArucoTracker::camera_rgb_callback, this);
@@ -292,6 +293,10 @@ void ArucoTracker::update()
     // publish the tracking data
     this->m_tracking_status_pub.publish(this->m_tracking_status);
     this->m_human_pose_pub.publish(this->m_body_pose);
+
+    //! publish 0 velocity for now
+    this->m_body_vel = geometry_msgs::Vector3();
+    this->m_human_vel_pub.publish(this->m_body_vel);
 }
 
 // ============================================================================
