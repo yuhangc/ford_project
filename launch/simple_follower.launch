@@ -3,8 +3,8 @@
   <include file="$(find turtlebot_bringup)/launch/3dsensor.launch"/>
   
   <!-- custom nodes for vision testing and following control -->
-  <node pkg="ford_project" type="vision_test.py" name="vision_tracker">
-  	<param name="range_lost_threshold" type="int" value="10000"/>
+  <node pkg="ford_project" type="vision_aruco" name="vision_tracker">
+  	<param name="camera_info_file" value="$(find ford_project)/camera_calibration/kinect_rgb.yml"/>
   </node>
   <node pkg="ford_project" type="simple_follower.py" name="simple_follower">
   	<param name="state_init" value="Idle"/>
