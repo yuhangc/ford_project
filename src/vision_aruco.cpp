@@ -6,7 +6,7 @@
 
 #define sqrt_12 0.70710678118
 #define PI 3.141592653589793
-#define DRAW_MARKER
+// #define DRAW_MARKER
 
 // ============================================================================
 // constructor
