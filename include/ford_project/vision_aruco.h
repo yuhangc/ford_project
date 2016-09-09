@@ -54,7 +54,15 @@ private:
 
     // detected body pose and velocity
     geometry_msgs::Pose2D m_body_pose;
+    geometry_msgs::Pose2D m_body_pose_last;
     geometry_msgs::Vector3 m_body_vel;
+    geometry_msgs::Vector3 m_body_vel_last;
+
+    // velocity filter coefficient
+    float m_vel_filter_alpha;
+
+    // time interval for discretization
+    double m_dt;
 
     // tracking status
     std_msgs::String m_tracking_status;

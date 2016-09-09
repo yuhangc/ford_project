@@ -25,6 +25,8 @@ ArucoTracker::ArucoTracker()
 
     ros::param::param<bool>("~recore_marker_pose", this->m_flag_record_marker_pose, false);
 
+    ros::param::param<float>("~velocity_filter_alpha", this->m_vel_filter_alpha, 0.3);
+
     // initialize aruco trackers
     this->m_detector.setThresholdParams(7, 7);
     this->m_detector.setThresholdParamRange(2, 0);
@@ -78,6 +80,13 @@ ArucoTracker::ArucoTracker()
     // tolerance and max iteration for averaging rotation
     this->m_rot_tol = 0.01;
     this->m_rot_max_iter = 100;
+
+    // time interval for discretization
+    this->m_dt = 0.03333333333;
+
+    // initialize velocity and pose history
+    this->m_body_pose_last = geometry_msgs::Pose2D();
+    this->m_body_vel_last = geometry_msgs::Vector3();
 }
 
 // ============================================================================
@@ -196,9 +205,10 @@ void ArucoTracker::update()
         // publish status
         this->m_tracking_status_pub.publish(this->m_tracking_status);
 
+        // set velocity to zero
+        this->m_body_vel = geometry_msgs::Vector3();
+
         return;
-    } else {
-        this->m_tracking_status.data = "Find";
     }
 
     // construct the body transformation matrices
@@ -283,19 +293,39 @@ void ArucoTracker::update()
     t_pos_avg = t_pos_avg / (double) n;
 
     // assign to human pose variable
-    this->m_body_pose.x = t_pos_avg[0];
-    this->m_body_pose.y = t_pos_avg[2];
-    this->m_body_pose.theta = std::atan2(t_rot_avg(0, 1), t_rot_avg(2, 1));
+    if (this->m_tracking_status.data == "Find") {
+        // first update last pose then update current pose
+        this->m_body_pose_last = this->m_body_pose;
 
-//    std::cout << this->m_body_pose << std::endl;
-//    std::getchar();
+        this->m_body_pose.x = t_pos_avg[0];
+        this->m_body_pose.y = t_pos_avg[2];
+        this->m_body_pose.theta = std::atan2(t_rot_avg(0, 1), t_rot_avg(2, 1));
+    } else {
+        // first update current pose then last pose
+        this->m_body_pose.x = t_pos_avg[0];
+        this->m_body_pose.y = t_pos_avg[2];
+        this->m_body_pose.theta = std::atan2(t_rot_avg(0, 1), t_rot_avg(2, 1));
+
+        this->m_body_pose_last = this->m_body_pose;
+    }
+
+    // set state to find
+    this->m_tracking_status.data = "Find";
 
     // publish the tracking data
     this->m_tracking_status_pub.publish(this->m_tracking_status);
     this->m_human_pose_pub.publish(this->m_body_pose);
 
-    //! publish 0 velocity for now
-    this->m_body_vel = geometry_msgs::Vector3();
+    // calculate velocity by simple discretization
+    this->m_body_vel_last = this->m_body_vel;
+
+    this->m_body_vel.x = (1 - this->m_vel_filter_alpha) * this->m_body_vel_last.x +
+            this->m_vel_filter_alpha * (this->m_body_pose.x - this->m_body_pose_last.x) / this->m_dt;
+    this->m_body_vel.y = (1 - this->m_vel_filter_alpha) * this->m_body_vel_last.y +
+            this->m_vel_filter_alpha * (this->m_body_pose.y - this->m_body_pose_last.y) / this->m_dt;
+    this->m_body_vel.z = (1 - this->m_vel_filter_alpha) * this->m_body_vel_last.z +
+            this->m_vel_filter_alpha * (this->m_body_pose.theta - this->m_body_pose_last.theta) / this->m_dt;
+
     this->m_human_vel_pub.publish(this->m_body_vel);
 }
 
