@@ -34,7 +34,7 @@ ArucoTracker::ArucoTracker()
     this->m_cam_param.readFromXMLFile(camera_info_file);
 
     // initialize publishers and subscribers
-    this->m_human_pose_pub = this->nh.advertise<geometry_msgs::Pose2D>("tracking/human_pose2d", 1);
+    this->m_human_pose_pub = this->nh.advertise<geometry_msgs::Pose2D>("tracking/human_pos2d", 1);
     this->m_tracking_status_pub = this->nh.advertise<std_msgs::String>("tracking/status", 1);
     this->m_camera_rgb_sub = this->nh.subscribe<sensor_msgs::Image>("/camera/rgb/image_raw", 1,
                                                                     &ArucoTracker::camera_rgb_callback, this);
