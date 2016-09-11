@@ -335,7 +335,7 @@ void ArucoTracker::camera_rgb_callback(const sensor_msgs::ImageConstPtr &image_m
     this->m_image_input = cv_bridge::toCvCopy(image_msg)->image;
     this->m_flag_image_received = true;
 
-    this->update();
+//    this->update();
 }
 
 // ============================================================================
@@ -344,15 +344,17 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "vision_aruco");
     ArucoTracker aruco_tracker;
 
-//    ros::Duration(0.1).sleep();
+    ros::Rate loop_rate(10);
+    for (int i = 0; i < 10; i++) {
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
 
-//    ros::Rate loop_rate(10);
-//    while (!ros::isShuttingDown())
-//    {
-//        std::cout << "loop!" << std::endl;
-//        ros::spinOnce();
-//        aruco_tracker.update();
-//        loop_rate.sleep();
-//    }
-    ros::spin();
+    while (!ros::isShuttingDown())
+    {
+        ros::spinOnce();
+        aruco_tracker.update();
+        loop_rate.sleep();
+    }
+//    ros::spin();
 }
