@@ -9,11 +9,11 @@
   <node pkg="ford_project" type="simple_follower.py" name="simple_follower">
   	<param name="state_init" value="Idle"/>
   	<param name="human_input_mode" value="tilt_control"/>
-  	<param name="dist_desired_follower" type="double" value="0.7"/>
+  	<param name="dist_desired_follower" type="double" value="0.9"/>
   	<param name="kp_linear" type="double" value="2.0"/>
-  	<param name="kp_angular" type="double" value="10.0"/>
-	<param name="kd_linear" type="double" value="0.5"/>
-  	<param name="kd_angular" type="double" value="1.0"/>
+  	<param name="kp_angular" type="double" value="6.0"/>
+	<param name="kd_linear" type="double" value="0.3"/>
+  	<param name="kd_angular" type="double" value="0.5"/>
 	<param name="kb_linear" type="double" value="0.1"/>
   	<param name="kb_angular" type="double" value="0.5"/>
   	<param name="dist_range_min" type="double" value="0.5"/>
