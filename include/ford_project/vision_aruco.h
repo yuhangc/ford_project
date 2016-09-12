@@ -34,6 +34,7 @@ private:
 
     // subscriber and publisher
     ros::Subscriber m_camera_rgb_sub;
+    ros::Subscriber m_camera_depth_sub;
     ros::Publisher m_human_pose_pub;
     ros::Publisher m_human_vel_pub;
     ros::Publisher m_tracking_status_pub;
@@ -84,16 +85,37 @@ private:
     double m_rot_tol;
     double m_rot_max_iter;
 
+    // contour area threshold for reporting lost
+    float m_min_area_found;
+
+    // depth data scale and depth data offset
+    float m_depth_scale;
+    float m_depth_offset;
+    float m_depth_cap_min;
+
+    // camera infos
+    int m_width;
+    int m_height;
+    float m_fov;
+    float m_fw;
+    float m_fh;
+
     // image from camera
     cv::Mat m_image_input;
+    cv::Mat m_depth_input;
 
     // data recording stream
     std::ofstream m_data_file;
 
     // flags
-    bool m_flag_image_received;
+    bool m_flag_rgb_image_received;
+    bool m_flag_depth_image_received;
     bool m_flag_record_marker_pose;
 
     // callback functions
     void camera_rgb_callback(const sensor_msgs::ImageConstPtr& image_msg);
+    void camera_depth_callback(const sensor_msgs::ImageConstPtr& image_msg);
+
+    // other functions
+    void report_lost();
 };
