@@ -345,7 +345,7 @@ int main(int argc, char** argv)
     ArucoTracker aruco_tracker;
 
     ros::Rate loop_rate(10);
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 50; i++) {
         ros::spinOnce();
         loop_rate.sleep();
     }
