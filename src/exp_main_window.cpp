@@ -307,13 +307,13 @@ void ExpMainWindow::on_combo_haptic_mag_currentIndexChanged(int index)
 {
     switch(index) {
     case 0:
-        this->haptic_signal.amplitude = 1.2;
+        this->haptic_signal.amplitude = 2.0;
         break;
     case 1:
-        this->haptic_signal.amplitude = 1.5;
+        this->haptic_signal.amplitude = 2.5;
         break;
     case 2:
-        this->haptic_signal.amplitude = 1.8;
+        this->haptic_signal.amplitude = 3.0;
         break;
     }
 }

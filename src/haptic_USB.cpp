@@ -10,8 +10,8 @@ HapticController::HapticController()
 {
     ros::param::param<int>("~analog_out_channel0", this->a_out0, 1);
     ros::param::param<int>("~analog_out_channel1", this->a_out1, 3);
-    ros::param::param<double>("~t_step", this->t_step, 0.007);
-    ros::param::param<double>("~t_ramp", this->t_ramp, 0.018);
+    ros::param::param<double>("~t_step", this->t_step, 0.005);
+    ros::param::param<double>("~t_ramp", this->t_ramp, 0.015);
 
     // handler and subscribers
     ros::NodeHandle nh;
@@ -131,7 +131,7 @@ void HapticController::update()
     {
     case State_Haptic_Idle:
 
-        this->render(0, 0, 0);
+        this->render(0, 0);
         // check if set to render
         if (this->set_state == 1) {
             // reset the set state variable
@@ -143,7 +143,7 @@ void HapticController::update()
         }
         break;
     case State_Haptic_Render:
-        this->render(this->amp_max0, this->amp_max1, this->t_state - this->t_vib_start);
+        this->render(this->amp_max0, this->amp_max1);
 
         // check if time out
         if (this->t_state - this->t_state_start >= this->period_render) {
@@ -161,7 +161,7 @@ void HapticController::update()
         }
         break;
     case State_Haptic_Pause:
-        this->render(0, 0, 0);
+        this->render(0, 0);
 
         // check if time out
         if (this->t_state - this->t_state_start >= this->period_pause) {
@@ -173,16 +173,19 @@ void HapticController::update()
 }
 
 // ============================================================================
-void HapticController::render(double amp_max0, double amp_max1, double t_now)
+void HapticController::render(double amp_max0, double amp_max1)
 {
     // calculate desired amplitude
     double amp0, amp1;
+    double t_now = ros::Time::now().toSec() - this->t_vib_start;
 
     if (this->vib_state == 0) {
         // calculate ramp for both actuators
         if (t_now > this->t_ramp) {
             this->vib_state = 1;
             this->t_vib_start = ros::Time::now().toSec();
+            amp0 = amp_max0;
+            amp1 = amp_max1;
         } else {
             amp0 = (-2.0 * t_now / this->t_ramp + 1.0) * amp_max0;
             amp1 = (-2.0 * t_now / this->t_ramp + 1.0) * amp_max1;
@@ -192,6 +195,8 @@ void HapticController::render(double amp_max0, double amp_max1, double t_now)
         if (t_now > this->t_step) {
             this->vib_state = 0;
             this->t_vib_start = ros::Time::now().toSec();
+            amp0 = amp_max0;
+            amp1 = amp_max1;
         } else {
             amp0 = amp_max0;
             amp1 = amp_max1;

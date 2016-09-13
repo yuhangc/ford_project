@@ -66,6 +66,6 @@ private:
     void hapticCallback(const ford_project::haptic_msg::ConstPtr& msg);
 
     // other functions
-    void render(double amp_max1, double amp_max2, double t_now);
+    void render(double amp_max1, double amp_max2);
     double calc_amp(double amp_max, double t_now);
 };

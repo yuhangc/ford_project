@@ -242,13 +242,19 @@ class SimpleFollower:
     def send_haptic_msg(self, rep, t_render, t_pause):
         new_msg = haptic_msg()
 
+        # calculate robot position in human's frame of reference
+        x_r = -self.human_pose.x * np.cos(self.human_pose.theta) - self.human_pose.y * np.sin(self.human_pose.theta)
+        y_r = self.human_pose.x * np.sin(self.human_pose.theta) - self.human_pose.y * np.cos(self.human_pose.theta)
+
+        phi = np.arctan2(y_r, x_r)
+
         # calcualte direction and amplitude based on human position
-        if self.human_pose.x < -self.haptic_dir_thresh:
-            new_msg.direction = 7   # backleft
-        elif self.human_pose.x > self.haptic_dir_thresh:
-            new_msg.direction = 6   # backright
-        else:
-            new_msg.direction = 3   # backward
+        id_map = np.array([1, 5, 2, 4, 0, 6, 3, 7])
+        for id in range(0, 8):
+            phi_c = id * np.pi / 4.0
+            if np.abs(phi - phi_c) <= np.pi / 8.0:
+                new_msg.direction = id_map[id]
+                break
 
         new_msg.amplitude = 1.5  # self.human_pose.y / self.haptic_amp_thresh
 

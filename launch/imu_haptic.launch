@@ -4,8 +4,8 @@
   	<param name="filter_mode" value="off"/>
   </node>
   <node pkg="ford_project" type="haptic_USB" name="haptic_control">
-  	<param name="t_step" type="double" value="0.007"/>
-  	<param name="t_ramp" type="double" value="0.018"/>
+  	<param name="t_step" type="double" value="0.004"/>
+  	<param name="t_ramp" type="double" value="0.015"/>
   </node>
   <node pkg="ford_project" type="gesture_DTW" name="gesture_detector">
   	<param name="gesture_data_path" value="$(find ford_project)/gesture_data"/>
