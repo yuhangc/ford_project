@@ -243,8 +243,8 @@ class SimpleFollower:
         new_msg = haptic_msg()
 
         # calculate robot position in human's frame of reference
-        x_r = -self.human_pose.x * np.cos(self.human_pose.theta) - self.human_pose.y * np.sin(self.human_pose.theta)
-        y_r = self.human_pose.x * np.sin(self.human_pose.theta) - self.human_pose.y * np.cos(self.human_pose.theta)
+        x_r = -self.human_pose.x * np.cos(-self.human_pose.theta) - self.human_pose.y * np.sin(-self.human_pose.theta)
+        y_r = self.human_pose.x * np.sin(-self.human_pose.theta) - self.human_pose.y * np.cos(-self.human_pose.theta)
 
         phi = np.arctan2(y_r, x_r)
         if phi < 0:
@@ -264,7 +264,7 @@ class SimpleFollower:
                 new_msg.direction = id
                 break
 
-        new_msg.amplitude = 1.5  # self.human_pose.y / self.haptic_amp_thresh
+        new_msg.amplitude = 2.5  # self.human_pose.y / self.haptic_amp_thresh
 
         # send haptic control message
         new_msg.repetition = rep
