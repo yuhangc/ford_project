@@ -45,6 +45,7 @@ class SimpleFollower:
 
         # initialize the blinkstick
         self.vision_led = blinkstick.find_first()
+	self.vision_led.set_color(name="red")
 
         # set initial states
         self.state = rospy.get_param("~state_init", "Idle")
@@ -177,13 +178,7 @@ class SimpleFollower:
                                                DigitalOutput, queue_size=1)
 
     # call back functions
-    def follower_mode_control_cb(self, follower_mode_control_msg):
-        # change LED color
-        if follower_mode_control_msg.data == "Find":
-            self.vision_led.set_color(name="green")
-        else:
-            self.vision_led.set_color(name="red")
-            
+    def follower_mode_control_cb(self, follower_mode_control_msg):            
         self.set_follower_mode = follower_mode_control_msg.data
 
     def human_track_pose_cb(self, msg):
@@ -193,6 +188,12 @@ class SimpleFollower:
         self.human_vel = vel_msg
 
     def human_track_status_cb(self, msg):
+	# change LED color
+	if msg.data == "Find":
+	    self.vision_led.set_color(name="green")
+	else:
+	    self.vision_led.set_color(name="red")
+
         self.track_status = msg.data
 
     def human_input_tilt_cb(self, msg):
