@@ -248,6 +248,8 @@ class SimpleFollower:
 
         phi = np.arctan2(y_r, x_r)
 
+        self.sys_msg_pub.publish("(" + str(x_r) + ", " + str(y_r) + ")    " + str(phi))
+
         # calcualte direction and amplitude based on human position
         # id_map = np.array([1, 5, 2, 4, 0, 6, 3, 7])
         for id in range(0, 8):
