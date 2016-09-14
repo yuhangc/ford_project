@@ -249,11 +249,11 @@ class SimpleFollower:
         phi = np.arctan2(y_r, x_r)
 
         # calcualte direction and amplitude based on human position
-        id_map = np.array([1, 5, 2, 4, 0, 6, 3, 7])
+        # id_map = np.array([1, 5, 2, 4, 0, 6, 3, 7])
         for id in range(0, 8):
             phi_c = id * np.pi / 4.0
             if np.abs(phi - phi_c) <= np.pi / 8.0:
-                new_msg.direction = id_map[id]
+                new_msg.direction = id
                 break
 
         new_msg.amplitude = 1.5  # self.human_pose.y / self.haptic_amp_thresh

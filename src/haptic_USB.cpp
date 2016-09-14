@@ -74,48 +74,48 @@ void HapticController::hapticCallback(const ford_project::haptic_msg::ConstPtr& 
     switch (this->dir)
     {
     case 0:
-        // left, west
-        this->amp_max0 = 1.0;
-        this->amp_max1 = 0;
-        break;
-    case 1:
         // right, east
-        this->amp_max0 = -1.0;
-        this->amp_max1 = 0;
-        break;
-    case 2:
-        // up, north
-        this->amp_max0 = 0;
-        this->amp_max1 = 1.0;
-        break;
-    case 3:
-        // down, south
         this->amp_max0 = 0;
         this->amp_max1 = -1.0;
         break;
-    case 4:
-        // upleft, NW
+    case 1:
+        // NE
+        this->amp_max0 = 0.707;
+        this->amp_max1 = -0.707;
+        break;
+    case 2:
+        // up, north
+        this->amp_max0 = 1.0;
+        this->amp_max1 = 0;
+        break;
+    case 3:
+        // NW
         this->amp_max0 = 0.707;
         this->amp_max1 = 0.707;
         break;
+    case 4:
+        // left, west
+        this->amp_max0 = 0;
+        this->amp_max1 = 1.0;
+        break;
     case 5:
-        // upright, NE
+        // SW
         this->amp_max0 = -0.707;
         this->amp_max1 = 0.707;
         break;
     case 6:
-        // downleft, SW
-        this->amp_max0 = 0.707;
-        this->amp_max1 = -0.707;
+        // down, south
+        this->amp_max0 = -1.0;
+        this->amp_max1 = 0;
         break;
     case 7:
-        // downright, SE
+        // SE
         this->amp_max0 = -0.707;
         this->amp_max1 = -0.707;
         break;
     }
     this->amp_max0 *= msg->amplitude;
-    this->amp_max1 *= msg->amplitude;
+    this->amp_max1 *= msg->amplitude * 1.0;
 
     // set state
     this->set_state = 1;

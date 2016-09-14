@@ -563,17 +563,22 @@
          </property>
          <item>
           <property name="text">
-           <string>1 - North</string>
+           <string>0 - East</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>2 - South</string>
+           <string>1 - NE</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>3 - East</string>
+           <string>2 - North</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>3 - NW</string>
           </property>
          </item>
          <item>
@@ -583,22 +588,17 @@
          </item>
          <item>
           <property name="text">
-           <string>5 - NE</string>
+           <string>5 - SW</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>6 - NW</string>
+           <string>6 - South</string>
           </property>
          </item>
          <item>
           <property name="text">
            <string>7 - SE</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>8 - SW</string>
           </property>
          </item>
         </widget>
