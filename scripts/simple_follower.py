@@ -247,14 +247,20 @@ class SimpleFollower:
         y_r = self.human_pose.x * np.sin(self.human_pose.theta) - self.human_pose.y * np.cos(self.human_pose.theta)
 
         phi = np.arctan2(y_r, x_r)
+        if phi < 0:
+            phi += 2 * np.pi
 
         self.sys_msg_pub.publish("(" + str(x_r) + ", " + str(y_r) + ")    " + str(phi))
 
         # calcualte direction and amplitude based on human position
         # id_map = np.array([1, 5, 2, 4, 0, 6, 3, 7])
         for id in range(0, 8):
-            phi_c = id * np.pi / 4.0
-            if np.abs(phi - phi_c) <= np.pi / 8.0:
+            phi_d = id * np.pi / 4.0 - phi
+            if phi_d < -np.pi:
+                phi_d += 2 * np.pi
+            elif phi_d > np.pi:
+                phi_d -= 2 * np.pi
+            if np.abs(phi_d) <= np.pi / 8.0:
                 new_msg.direction = id
                 break
 
