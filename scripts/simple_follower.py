@@ -3,7 +3,7 @@
 import rospy
 import numpy as np
 
-from tf import transformations
+from blinkstick import blinkstick
 
 from geometry_msgs.msg import Pose2D
 from geometry_msgs.msg import Twist
@@ -42,6 +42,9 @@ gesture_dict = {0: "twist",
 class SimpleFollower:
     def __init__(self):
         # cv2.namedWindow("status", 1)
+
+        # initialize the blinkstick
+        self.vision_led = blinkstick.find_first()
 
         # set initial states
         self.state = rospy.get_param("~state_init", "Idle")
@@ -175,6 +178,12 @@ class SimpleFollower:
 
     # call back functions
     def follower_mode_control_cb(self, follower_mode_control_msg):
+        # change LED color
+        if follower_mode_control_msg.data == "Find":
+            self.vision_led.set_color(name="green")
+        else:
+            self.vision_led.set_color(name="red")
+            
         self.set_follower_mode = follower_mode_control_msg.data
 
     def human_track_pose_cb(self, msg):
