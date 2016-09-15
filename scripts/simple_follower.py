@@ -415,7 +415,8 @@ class SimpleFollower:
             self.stuck_backup_count += 1
         else:
             # check if human is within distance
-            if self.track_status == "Find" and self.flag_soft_stuck and self.human_pose.y <= self.dist_stuck_resume_max:
+            if self.track_status == "Find" and self.flag_soft_stuck == 0 and \
+                            self.human_pose.y <= self.dist_stuck_resume_max:
                 rospy.logwarn('Prepare to switch to follow')
                 self.sys_msg_pub.publish("Continue to follow")
 
