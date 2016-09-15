@@ -192,11 +192,12 @@ class SimpleFollower:
         self.human_vel = vel_msg
 
     def human_track_status_cb(self, msg):
-        # change LED color
-        if msg.data == "Find":
-            self.vision_led.set_color(name="green")
-        else:
-            self.vision_led.set_color(name="red")
+        # change LED color when status change
+        if msg.data != self.track_status:
+            if msg.data == "Find":
+                self.vision_led.set_color(name="green")
+            else:
+                self.vision_led.set_color(name="red")
 
         self.track_status = msg.data
 
@@ -536,3 +537,6 @@ if __name__ == "__main__":
     while not rospy.is_shutdown():
         follower.update()
         rate.sleep()
+
+    # turn off the LED
+    follower.vision_led.turn_off()
