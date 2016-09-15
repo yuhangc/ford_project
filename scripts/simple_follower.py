@@ -302,6 +302,7 @@ class SimpleFollower:
     def set_stuck_param(self):
         self.t_stuck_start = rospy.get_time()
         self.period_stuck = np.random.randint(self.period_stuck_min, self.period_stuck_max)
+        self.sys_msg_pub.publish("start time: " + str(self.t_stuck_start) + "period: " + str(self.period_stuck))
 
     # state functions
     def idle(self):
@@ -355,7 +356,8 @@ class SimpleFollower:
         # check for stuck set by software
         if self.flag_soft_stuck > 0:
             # use software to simulate stuck
-            if (rospy.get_time() - self.t_stuck_start) > self.period_stuck and self.num_stuck <= self.num_stuck_total:
+            dt = rospy.get_time() - self.t_stuck_start
+            if dt > self.period_stuck and self.num_stuck <= self.num_stuck_total:
                 self.num_stuck += 1
 
                 # send haptic signal
