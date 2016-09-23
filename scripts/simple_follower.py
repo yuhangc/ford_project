@@ -59,6 +59,9 @@ class SimpleFollower:
         self.cmd_state_timer = rospy.get_time()
         self.cmd_state_period = 0.0
 
+        # time in following mode
+        self.dt_following = 0.0
+
         # loop counters
         self.stuck_count = 0
         self.stuck_backup_count = 0
@@ -130,7 +133,7 @@ class SimpleFollower:
         self.period_stuck_max = rospy.get_param("~period_stuck_max", 60)
 
         self.num_stuck = 0
-        self.t_stuck_start = 0.0
+        self.t_following_start = 0.0
         self.period_stuck = 0.0
 
         # subscribers to human tracking
@@ -309,9 +312,9 @@ class SimpleFollower:
             self.state = "Teleop"
 
     def set_stuck_param(self):
-        self.t_stuck_start = rospy.get_time()
+        self.t_following_start = rospy.get_time()
         self.period_stuck = np.random.randint(self.period_stuck_min, self.period_stuck_max)
-        self.sys_msg_pub.publish("start time: " + str(self.t_stuck_start) + "period: " + str(self.period_stuck))
+        self.sys_msg_pub.publish("start time: " + str(self.t_following_start) + "period: " + str(self.period_stuck))
 
     # state functions
     def idle(self):
@@ -331,6 +334,8 @@ class SimpleFollower:
             self.state = "Teleop"
 
     def follow(self):
+        # update time following
+        self.dt_following = rospy.get_time() - self.t_following_start
         # check if need to switch state
         if self.track_status == "Lost":
             self.lost_vision_count += 1
@@ -338,6 +343,9 @@ class SimpleFollower:
                 if self.set_follower_mode == 2:
                     # send haptic signal
                     self.send_haptic_msg(3, 1.0, 1.0)
+
+                # update stuck timer
+                self.period_stuck -= self.dt_following
 
                 # set robot to stop and go to state lost vision
                 self.lost_vision_count = 0
@@ -365,8 +373,7 @@ class SimpleFollower:
         # check for stuck set by software
         if self.flag_soft_stuck > 0:
             # use software to simulate stuck
-            dt = rospy.get_time() - self.t_stuck_start
-            if dt > self.period_stuck and self.num_stuck <= self.num_stuck_total:
+            if self.dt_following > self.period_stuck and self.num_stuck <= self.num_stuck_total:
                 self.num_stuck += 1
 
                 # send haptic signal
@@ -375,6 +382,7 @@ class SimpleFollower:
 
                 self.state = "GetStuck"
                 self.sys_msg_pub.publish("Robot stuck (software)!")
+                return
 
         # check for real stuck
         if self.bumper_event.state == BumperEvent.PRESSED:
@@ -411,6 +419,7 @@ class SimpleFollower:
             if self.dist_range_min < self.human_pose.y < self.dist_range_max:
                 # go back to following
                 self.state = "Follow"
+                self.t_following_start = rospy.get_time()
 
         # do teleop
         if self.set_follower_mode == 2:
@@ -423,16 +432,7 @@ class SimpleFollower:
         if self.stuck_backup_count < self.stuck_backup_count_limit and self.flag_soft_stuck == 0:
             self.stuck_backup_count += 1
         else:
-            # check if human is within distance
-            if self.track_status == "Find" and self.flag_soft_stuck == 0 and \
-                            self.human_pose.y <= self.dist_stuck_resume_max:
-                rospy.logwarn('Prepare to switch to follow')
-                self.sys_msg_pub.publish("Continue to follow")
-
-                self.state = "Follow"
-                self.set_stuck_param()
-
-            # also can be set to follow manually
+            # has to be set to follow manually
             if self.set_state == 1:
                 if self.track_status == "Find":
                     rospy.logwarn('Prepare to switch to follow')
