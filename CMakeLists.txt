@@ -149,6 +149,15 @@ set(VISION_ARUCO_HEADERS
     include/ford_project/vision_aruco.h
 )
 
+# set source, header for post video processing node
+set(VIDEO_PROCESSING_SOURCES
+    src/video_processing.cpp
+)
+
+set(VIDEO_PROCESSING_HEADERS
+    include/ford_project/video_processing.h
+)
+
 ## Declare a C++ executable
 add_executable(imu_manager ${IMU_MANAGER_SOURCES} ${IMU_MANAGER_HEADERS})
 target_link_libraries(imu_manager ${catkin_LIBRARIES})
@@ -164,6 +173,9 @@ target_link_libraries(gesture_DTW ${catkin_LIBRARIES} ${Eigen_LIBRARIES})
 
 add_executable(vision_aruco ${VISION_ARUCO_SOURCES} ${VISION_ARUCO_HEADERS})
 target_link_libraries(vision_aruco ${catkin_LIBRARIES} ${aruco_LIBS} ${OpenCV_LIBRARIES})
+
+add_executable(video_processing ${VIDEO_PROCESSING_SOURCES} ${VIDEO_PROCESSING_HEADERS})
+target_link_libraries(video_processing ${catkin_LIBRARIES} ${aruco_LIBS} ${OpenCV_LIBRARIES})
 
 # compile the experiment main window application
 qt5_wrap_cpp(MOC_SOURCES ${EXP_WINDOW_HEADERS})
