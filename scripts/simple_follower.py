@@ -149,6 +149,8 @@ class SimpleFollower:
                                                         Int8, self.human_input_gesture_cb)
         self.human_input_mode_sub = rospy.Subscriber("human_input/button",
                                                      Bool, self.human_input_mode_cb)
+        self.button_event_sub = rospy.Subscriber("human_input/button_event",
+                                                 Int8, self.button_event_cb)
 
         # subscriber to state control
         self.state_control_sub = rospy.Subscriber("state_control/set_state",
@@ -210,6 +212,13 @@ class SimpleFollower:
 
         # check if set to start/stop
         if gesture_dict[self.human_input_gesture] == "twist":
+            if self.state == "Idle":
+                self.set_state = 1
+            else:
+                self.set_state = 0
+
+    def button_event_cb(self, msg):
+        if msg.data == 2:
             if self.state == "Idle":
                 self.set_state = 1
             else:
@@ -341,7 +350,7 @@ class SimpleFollower:
             self.lost_vision_count = 0
 
         # check if human is walking too fast
-        if np.abs(self.cmd_vel.linear.x) > self.turtlebot_vel_max:
+        if np.abs(self.cmd_vel.linear.x) > self.turtlebot_vel_max * 1.5:
             self.too_fast_count += 1
             if self.too_fast_count >= self.too_fast_count_limit:
                 if self.set_follower_mode == 2:
