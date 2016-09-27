@@ -55,6 +55,8 @@ void ExpMainWindow::Init()
     this->haptic_control_pub = this->nh.advertise<ford_project::haptic_msg>("/haptic_control", 1);
 
     // get parameters
+    ros::param::param<std::string>("~data_file_path", this->data_file_path, "/home/rainbow/Desktop/data");
+
     this->vel_inc_limit_lin = 0.02;
     this->vel_inc_limit_ang = 0.05;
 
@@ -83,7 +85,7 @@ void ExpMainWindow::UpdateGUIInfo()
 
     // record data if necessary
     if (this->flag_start_data_saving) {
-        this->data_file << (ros::Time().now().toSec() - this->time_start_data_saving)
+        this->data_file << (ros::Time().now())// - this->time_start_data_saving)
                            << ", " << this->robot_state << std::endl;
     }
 
@@ -372,7 +374,7 @@ void ExpMainWindow::on_button_start_condition_clicked()
     // open file to save data and set data saving flag to be true
     this->file_count ++;
     char file_name[50];
-    std::sprintf(file_name, "/home/yuhangche/Desktop/data/test%d.txt", this->file_count);
+    std::sprintf(file_name, "%s/test%d_cond%d.txt", this->data_file_path.c_str(), this->file_count, this->set_condition);
 
     this->data_file.open(file_name);
     this->flag_start_data_saving = true;

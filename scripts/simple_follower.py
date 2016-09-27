@@ -43,10 +43,10 @@ class SimpleFollower:
     def __init__(self):
         # initialize the blinkstick
         self.vision_led = blinkstick.find_first()
-        self.vision_led.set_color(name="red")
 
         # set initial states
         self.state = rospy.get_param("~state_init", "Idle")
+        self.state_last = ""
         self.cmd_state = rospy.get_param("~cmd_state_init", "Idle")
 
         # flag that indicates whether haptic tether is enables
@@ -197,12 +197,12 @@ class SimpleFollower:
         self.human_vel = vel_msg
 
     def human_track_status_cb(self, msg):
-        # change LED color when status change
-        if msg.data != self.track_status:
-            if msg.data == "Find":
-                self.vision_led.set_color(name="green")
-            else:
-                self.vision_led.set_color(name="red")
+        # # change LED color when status change
+        # if msg.data != self.track_status:
+        #     if msg.data == "Find":
+        #         self.vision_led.set_color(name="green")
+        #     else:
+        #         self.vision_led.set_color(name="red")
 
         self.track_status = msg.data
 
@@ -222,10 +222,10 @@ class SimpleFollower:
 
     def button_event_cb(self, msg):
         if msg.data == 2:
-            if self.state == "Idle":
-                self.set_state = 1
-            else:
+            if self.state == "Follow":
                 self.set_state = 0
+            else:
+                self.set_state = 1
 
     def human_input_mode_cb(self, msg):
         if msg.data:
@@ -370,10 +370,10 @@ class SimpleFollower:
         else:
             self.too_fast_count = 0
 
-        # check for stuck set by software
+        # check for "stuck" set by software
         if self.flag_soft_stuck > 0:
             # use software to simulate stuck
-            if self.dt_following > self.period_stuck and self.num_stuck <= self.num_stuck_total:
+            if self.dt_following > self.period_stuck:
                 self.num_stuck += 1
 
                 # send haptic signal
@@ -521,6 +521,21 @@ class SimpleFollower:
 
         # publish the state
         self.robot_state_pub.publish(current_state)
+
+        # change LED color based on state
+        if self.state != self.state_last:
+            if self.state == "Idle":
+                self.vision_led.set_color(name="yellow")
+            elif self.state == "Follow":
+                self.vision_led.set_color(name="green")
+            elif self.state == "LostVision":
+                self.vision_led.set_color(name="red")
+            elif self.state == "GetStuck":
+                self.vision_led.set_color(name="purple")
+            elif self.state == "Teleop":
+                self.vision_led.set_color(name="blue")
+
+        self.state_last = self.state
 
         # a mini state machine for sending desired velocity
         if self.cmd_state == "Idle":

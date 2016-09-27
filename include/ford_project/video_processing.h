@@ -13,6 +13,8 @@
 
 #include "Eigen/Dense"
 
+#define NUM_MARKER_CALIBRATION 4
+
 class VideoProcessor
 {
 public:
@@ -24,7 +26,8 @@ public:
 
     // initialization
     void init(std::string file_path);
-    void get_path(std::string file_path);
+    void calibrate(std::string file_name);
+    void get_path(std::string file_name);
     void close_all();
 
     // update functions
@@ -47,7 +50,8 @@ private:
     // marker size
     float m_marker_size;
 
-    // marker id for robot
+    // marker id for robot and calibration
+    int m_marker_id_calibration[NUM_MARKER_CALIBRATION];
     int m_marker_id_robot;
 
     // contour area threshold for reporting lost
@@ -77,6 +81,7 @@ private:
 
     // data recording streams
     std::ofstream m_path_data;
+    std::ofstream m_calibration_data;
     std::ofstream m_human_data;
     std::ofstream m_robot_data;
 };

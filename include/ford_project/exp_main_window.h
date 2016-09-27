@@ -80,6 +80,7 @@ private:
     geometry_msgs::Twist cmd_vel;
 
     // variable for data saving
+    std::string data_file_path;
     std::ofstream data_file;
     bool flag_start_data_saving;
 
