@@ -1,7 +1,10 @@
 #include "video_processing.h"
+
 #include <string>
 #include <iostream>
 #include <sstream>
+
+#include <ros/console.h>
 
 #define sqrt_12 0.70710678118
 #define PI 3.141592653589793
@@ -30,7 +33,7 @@ VideoProcessor::VideoProcessor()
     }
 
     this->m_width = 1920;
-    this->m_height = 1080;
+    this->m_height = 1440;
 
     // initialize aruco trackers
     this->m_detector.setThresholdParams(7, 7);
@@ -72,7 +75,7 @@ void VideoProcessor::init(std::string file_path)
 
     // open the video
     file_name = file_path;
-    file_name.append("/exp_video.MP4");
+    file_name.append("/cond1.mp4");
     this->m_video_capture.open(file_name);
 }
 
@@ -89,23 +92,45 @@ void VideoProcessor::calibrate(std::string file_name)
 {
     this->m_image_input = cv::imread(file_name);
 
-    // detect the markers
-    this->m_markers = this->m_detector.detect(this->m_image_input, this->m_cam_param, this->m_marker_size);
+    aruco::CameraParameters t_cam_param = this->m_cam_param;
+//    t_cam_param.CamSize = cv::Size(4000, 3000);
+//    t_cam_param.CameraMatrix.at<float>(0,0) = t_cam_param.CameraMatrix.at<float>(0,0) / 2.0;
+//    t_cam_param.CameraMatrix.at<float>(1,1) = t_cam_param.CameraMatrix.at<float>(0,0) / 2.0;
+//    t_cam_param.CameraMatrix.at<float>(0,2) = t_cam_param.CameraMatrix.at<float>(0,0) * 2.0;
+//    t_cam_param.CameraMatrix.at<float>(1,2) = t_cam_param.CameraMatrix.at<float>(0,0) * 2.0;
+//    std::cout << t_cam_param.CamSize << std::endl;
 
-    // no markers found
-    if (this->m_markers.size() != NUM_MARKER_CALIBRATION) {
-        ROS_ERROR("wrong marker number!");
-        return;
+    // detect the markers
+    this->m_markers = this->m_detector.detect(this->m_image_input, t_cam_param, this->m_marker_size);
+
+    // not enough marker
+//    if (this->m_markers.size() != NUM_MARKER_CALIBRATION) {
+//        ROS_ERROR("wrong marker number! only %d markers found", this->m_markers.size());
+//        return;
+//    }
+
+    // draw the markers
+    cv::Mat t_output_image;
+    this->m_image_input.copyTo(t_output_image);
+    for (int i = 0; i < this->m_markers.size(); i++) {
+        this->m_markers[i].draw(t_output_image, cv::Scalar(0, 0, 255), 1);
+        aruco::CvDrawingUtils::draw3dCube(t_output_image, this->m_markers[i], this->m_cam_param);
+        aruco::CvDrawingUtils::draw3dAxis(t_output_image, this->m_markers[i], this->m_cam_param);
     }
+    cv::Mat t_display;
+    cv::resize(t_output_image, t_display, cv::Size(), 0.3, 0.3);
+    cv::imshow("test", t_display);
+    cv::waitKey(500);
+    std::getchar();
 
     // write the positions of each marker to file
     for (int i = 0; i < NUM_MARKER_CALIBRATION; i++) {
-        this->m_calibration_data << this->m_markers[i].id
-                                 << this->m_markers[i].Tvec.at<float>(0, 0)
-                                 << this->m_markers[i].Tvec.at<float>(1, 0)
-                                 << this->m_markers[i].Tvec.at<float>(2, 0)
-                                 << this->m_markers[i].Rvec.at<float>(0, 0)
-                                 << this->m_markers[i].Rvec.at<float>(1, 0)
+        this->m_calibration_data << this->m_markers[i].id << ",  "
+                                 << this->m_markers[i].Tvec.at<float>(0, 0) << ",  "
+                                 << this->m_markers[i].Tvec.at<float>(1, 0) << ",  "
+                                 << this->m_markers[i].Tvec.at<float>(2, 0) << ",  "
+                                 << this->m_markers[i].Rvec.at<float>(0, 0) << ",  "
+                                 << this->m_markers[i].Rvec.at<float>(1, 0) << ",  "
                                  << this->m_markers[i].Rvec.at<float>(2, 0) << std::endl;
     }
 }
@@ -113,14 +138,16 @@ void VideoProcessor::calibrate(std::string file_name)
 // ============================================================================
 void VideoProcessor::get_path(std::string file_name)
 {
-    this->m_image_input = cv::imread(file_name);
+    cv::Mat t_image_input = cv::imread(file_name);
+//    this->m_image_input = cv::imread(file_name);
+    cv::undistort(t_image_input, this->m_image_input, this->m_cam_param.CameraMatrix, this->m_cam_param.Distorsion);
 
     // color segmentation
     cv::Mat t_image_hsv;
     cv::cvtColor(this->m_image_input, t_image_hsv, CV_BGR2HSV);
 
     cv::Mat t_color_mask;
-    cv::inRange(t_image_hsv, cv::Scalar(160, 100, 100), cv::Scalar(179, 255, 255), t_color_mask);
+    cv::inRange(t_image_hsv, cv::Scalar(60, 100, 100), cv::Scalar(90, 255, 255), t_color_mask);
 
     // opening filter to remove small objects (false positives)
     cv::erode(t_color_mask, t_color_mask, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)));
@@ -130,18 +157,19 @@ void VideoProcessor::get_path(std::string file_name)
     cv::dilate(t_color_mask, t_color_mask, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)));
     cv::erode(t_color_mask, t_color_mask, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)));
 
-    //! don't use the left part of the image since they are not path
-    cv::Mat t_roi = t_color_mask.colRange(0, 199);
-    t_roi.setTo(0);
-    t_roi = t_color_mask.colRange(199, 220).rowRange(0, 100);
-    t_roi.setTo(0);
-    t_roi = t_color_mask.colRange(199, 230).rowRange(975, 1080);
-    t_roi.setTo(0);
+//    //! don't use the left part of the image since they are not path
+//    cv::Mat t_roi = t_color_mask.colRange(0, 199);
+//    t_roi.setTo(0);
+//    t_roi = t_color_mask.colRange(199, 220).rowRange(0, 100);
+//    t_roi.setTo(0);
+//    t_roi = t_color_mask.colRange(199, 230).rowRange(975, 1080);
+//    t_roi.setTo(0);
 
     cv::Mat t_mask;
     cv::resize(t_color_mask, t_mask, cv::Size(), 0.5, 0.5);
     cv::imshow("test", t_mask * 255);
-    cv::waitKey(50);
+    cv::waitKey(500);
+    std::cout << this->m_image_input.size() << std::endl;
     std::getchar();
 
     // record all non-zero coordinates in the mask
@@ -158,7 +186,8 @@ void VideoProcessor::get_path(std::string file_name)
 bool VideoProcessor::get_frame()
 {
     this->m_frame_count ++;
-    std::cout << this->m_frame_count << std::endl;
+//    std::cout << this->m_frame_count << std::endl;
+    ROS_INFO("processing frame %d...", this->m_frame_count);
 
     if (this->m_video_capture.grab()) {
         this->m_video_capture.retrieve(this->m_image_input);
@@ -174,10 +203,14 @@ bool VideoProcessor::get_frame()
 // ============================================================================
 void VideoProcessor::get_human_pos()
 {
+    // rectify image first
+    cv::Mat t_image_input;
+    cv::undistort(this->m_image_input, t_image_input, this->m_cam_param.CameraMatrix, this->m_cam_param.Distorsion);
+
     // color segmentation to find human
     // color segmentation
     cv::Mat t_image_hsv;
-    cv::cvtColor(this->m_image_input, t_image_hsv, CV_BGR2HSV);
+    cv::cvtColor(t_image_input, t_image_hsv, CV_BGR2HSV);
 
     cv::Mat t_color_mask;
     cv::inRange(t_image_hsv, cv::Scalar(20, 100, 100), cv::Scalar(30, 255, 255), t_color_mask);
@@ -223,7 +256,7 @@ void VideoProcessor::get_human_pos()
         return;
     }
 
-    // show the mask
+//    // show the mask
 //    cv::Mat t_mask;
 //    cv::resize(t_color_mask, t_mask, cv::Size(), 0.5, 0.5);
 //    cv::imshow("test", t_mask * 255);
@@ -256,24 +289,18 @@ void VideoProcessor::get_robot_pos()
     }
 
     // if found, check if id match the robot marker id
+//    cv::Mat t_output_image;
+//    this->m_image_input.copyTo(t_output_image);
     this->m_flag_robot_found = false;
     for (int i = 0; i < this->m_markers.size(); i++) {
         if (this->m_markers[i].id == this->m_marker_id_robot) {
             // found robot
             this->m_flag_robot_found = true;
 
-            // draw cube and display
-//            cv::Mat t_output_image;
-//            this->m_image_input.copyTo(t_output_image);
-
+//            // draw cube
 //            this->m_markers[i].draw(t_output_image, cv::Scalar(0, 0, 255), 1);
 //            aruco::CvDrawingUtils::draw3dCube(t_output_image, this->m_markers[i], this->m_cam_param);
 //            aruco::CvDrawingUtils::draw3dAxis(t_output_image, this->m_markers[i], this->m_cam_param);
-
-//            cv::Mat t_display;
-//            cv::resize(t_output_image, t_display, cv::Size(), 0.5, 0.5);
-//            cv::imshow("test", t_display);
-//            cv::waitKey(5);
 
             // obtain position information
             geometry_msgs::Pose2D t_pose;
@@ -313,19 +340,29 @@ void VideoProcessor::get_robot_pos()
             break;
         }
     }
+
+//    cv::Mat t_display;
+//    cv::resize(t_output_image, t_display, cv::Size(), 0.5, 0.5);
+//    cv::imshow("test", t_display);
+//    cv::waitKey(5);
 }
 
 // ============================================================================
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "video_process");
+    if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info) ) {
+       ros::console::notifyLoggerLevelsChanged();
+    }
 
     VideoProcessor video_processor;
 
-    video_processor.init("/home/yuhangche/Desktop/exp_video");
-    video_processor.get_path("/home/yuhangche/Desktop/exp_video/calibration.JPG");
+    video_processor.init("/home/yuhangche/Desktop/exp_video/pilot1");
+    video_processor.calibrate("/home/yuhangche/Desktop/exp_video/pilot1/calibration.JPG");
+    video_processor.get_path("/home/yuhangche/Desktop/exp_video/pilot1/calibration1.jpg");
 
     while (video_processor.get_frame() && !ros::isShuttingDown()) {
+        video_processor.get_frame();
         video_processor.get_human_pos();
         video_processor.get_robot_pos();
     }

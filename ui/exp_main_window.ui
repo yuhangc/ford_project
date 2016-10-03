@@ -1033,59 +1033,6 @@ p, li { white-space: pre-wrap; }
          </property>
         </widget>
        </item>
-       <item row="2" column="2">
-        <widget class="QComboBox" name="combo_gesture_cmd">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>1</verstretch>
-          </sizepolicy>
-         </property>
-         <item>
-          <property name="text">
-           <string>Forward</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Backward</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Turn Left</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Turn Right</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Stop</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Start</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item row="3" column="2">
-        <widget class="QPushButton" name="button_send_gesture">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Send Gesture Command</string>
-         </property>
-        </widget>
-       </item>
        <item row="5" column="0" colspan="3">
         <widget class="QLineEdit" name="lineEdit_gesture_rec">
          <property name="sizePolicy">
@@ -1099,6 +1046,13 @@ p, li { white-space: pre-wrap; }
          </property>
          <property name="readOnly">
           <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QPushButton" name="button_reverse_mapping">
+         <property name="text">
+          <string>Reverse Mapping</string>
          </property>
         </widget>
        </item>

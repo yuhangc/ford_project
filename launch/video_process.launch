@@ -1,5 +1,5 @@
 <launch>
   <node pkg="ford_project" type="video_processing" name="video_processing">
-  	<param name="camera_info_file" value="$(find ford_project)/camera_calibration/gopro.yml"/>
+  	<param name="camera_info_file" value="$(find ford_project)/camera_calibration/gopro1440.yml"/>
   </node>
 </launch>

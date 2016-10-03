@@ -12,6 +12,7 @@
 #include "std_msgs/Char.h"
 #include "std_msgs/Int8.h"
 #include "std_msgs/String.h"
+#include "std_msgs/Bool.h"
 #include "nav_msgs/Odometry.h"
 #include "ford_project/haptic_msg.h"
 
@@ -62,6 +63,7 @@ private:
     ros::Publisher set_condition_pub;
     ros::Publisher haptic_control_pub;
     ros::Publisher cmd_vel_pub;
+    ros::Publisher reverse_mapping_pub;
 
     // set state
     std_msgs::Int8 set_state;
@@ -78,6 +80,9 @@ private:
     geometry_msgs::Twist cmd_vel_limits;
     geometry_msgs::Twist cmd_vel_goal;
     geometry_msgs::Twist cmd_vel;
+
+    // flag for reverse velocity mapping
+    double flag_reverse_mapping;
 
     // variable for data saving
     std::string data_file_path;
@@ -123,6 +128,7 @@ private slots:
     void on_combo_exp_condition_currentIndexChanged(int index);
     void on_button_start_condition_clicked();
     void on_button_stop_record_clicked();
+    void on_button_reverse_mapping_clicked();
 };
 
 #endif // EXP_MAIN_WINDOW_H

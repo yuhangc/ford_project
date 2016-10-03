@@ -122,9 +122,10 @@ class SimpleFollower:
         self.pitch_to_angular_scale = rospy.get_param("~pitch_to_angular_scale", -3.0)
         self.pitch_deadband = rospy.get_param("~pitch_deadband", 0.4)
         self.roll_deadband = rospy.get_param("~roll_deadband", 0.4)
-        self.pitch_offset = rospy.get_param("pitch_offset", 0.2)
-        self.roll_offset = rospy.get_param("roll_offset", 0.2)
-        self.roll_center_offset = rospy.get_param("roll_center_offset", 0.1)
+        self.pitch_offset = rospy.get_param("~pitch_offset", 0.2)
+        self.roll_offset = rospy.get_param("~roll_offset", 0.2)
+        self.roll_center_offset = rospy.get_param("~roll_center_offset", 0.1)
+        self.flag_reverse_mapping = rospy.get_param("~reverse_mapping", False)
 
         # randomization parameter for "get stuck"
         self.flag_soft_stuck = rospy.get_param("~flag_software_stuck", 1)
@@ -154,6 +155,10 @@ class SimpleFollower:
                                                      Bool, self.human_input_mode_cb)
         self.button_event_sub = rospy.Subscriber("human_input/button_event",
                                                  Int8, self.button_event_cb)
+
+        # subscriber to reverse mapping
+        self.reverse_mapping_sub = rospy.Subscriber("human_input/reverse_mapping",
+                                                    Bool, self.reverse_mapping_cb)
 
         # subscriber to state control
         self.state_control_sub = rospy.Subscriber("state_control/set_state",
@@ -232,6 +237,12 @@ class SimpleFollower:
             self.flag_button_pressed = True
         else:
             self.flag_button_pressed = False
+
+    def reverse_mapping_cb(self, msg):
+        if msg.data:
+            self.flag_reverse_mapping = True
+        else:
+            self.flag_reverse_mapping = False
 
     def set_state_cb(self, msg):
         self.set_state = msg.data
@@ -483,6 +494,11 @@ class SimpleFollower:
                 self.tele_vel.angular.z = self.pitch_to_angular_scale * (self.human_input_tilt.y + self.pitch_offset)
             else:
                 self.tele_vel.angular.z = 0
+
+            # reverse mapping if necessary
+            if self.flag_reverse_mapping:
+                vx = -vx
+                self.tele_vel.angular.z = -self.tele_vel.angular.z
 
             self.send_vel_cmd(vx, self.tele_vel.angular.z)
         else:

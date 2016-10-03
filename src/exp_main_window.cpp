@@ -53,6 +53,7 @@ void ExpMainWindow::Init()
     this->set_robot_state_pub = this->nh.advertise<std_msgs::Int8>("/state_control/set_state", 1);
     this->set_condition_pub = this->nh.advertise<std_msgs::Int8>("/state_control/set_follower_mode", 1);
     this->haptic_control_pub = this->nh.advertise<ford_project::haptic_msg>("/haptic_control", 1);
+    this->reverse_mapping_pub = this->nh.advertise<std_msgs::Bool>("/human_input/reverse_mapping", 1);
 
     // get parameters
     ros::param::param<std::string>("~data_file_path", this->data_file_path, "/home/rainbow/Desktop/data");
@@ -67,6 +68,8 @@ void ExpMainWindow::Init()
     this->cmd_vel = geometry_msgs::Twist();
     this->cmd_vel_goal = geometry_msgs::Twist();
     this->cmd_vel_limits = geometry_msgs::Twist();
+
+    this->flag_reverse_mapping = false;
 
     // set update rate
     connect(&m_update_timer, SIGNAL(timeout()), this, SLOT(UpdateGUIInfo()));
@@ -388,4 +391,16 @@ void ExpMainWindow::on_button_stop_record_clicked()
     // close file and set data saving flag to false
     this->data_file.close();
     this->flag_start_data_saving = false;
+}
+
+// ============================================================================
+void ExpMainWindow::on_button_reverse_mapping_clicked()
+{
+    // toggle the reverse mapping flag
+    this->flag_reverse_mapping = !this->flag_reverse_mapping;
+
+    // publish the message
+    std_msgs::Bool t_msg;
+    t_msg.data = this->flag_reverse_mapping;
+    this->reverse_mapping_pub.publish(t_msg);
 }
