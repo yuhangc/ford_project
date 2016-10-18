@@ -124,7 +124,7 @@ class OrientationEstimator:
 
         # convert from Vector3 to np.array
         omg = np.array([self.gyro_data.x, self.gyro_data.y, self.gyro_data.z]) * np.pi / 180.0
-        acc = np.array([self.acc_data.x, self.acc_data.y, -self.acc_data.z])
+        acc = np.array([self.acc_data.x, self.acc_data.y, self.acc_data.z])
         mag = np.array([self.mag_data.x, self.mag_data.y, -self.mag_data.z])
 
         if self.filter_mode == "on":

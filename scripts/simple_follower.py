@@ -67,7 +67,11 @@ class SimpleFollower:
         self.stuck_backup_count = 0
         self.lost_vision_count = 0
         self.too_fast_count = 0
+        self.too_fast_pause_count = 0
 
+        self.too_fast_pause_limit = 100
+        self.flag_too_fast_pause = False
+        
         self.stuck_backup_count_limit = 50
         self.stuck_count_limit = rospy.get_param("~stuck_count_limit", 25)
         self.lost_vision_count_limit = rospy.get_param("~lost_vision_count_limit", 25)
@@ -118,13 +122,14 @@ class SimpleFollower:
         self.dist_stuck_resume_max = rospy.get_param("~dist_stuck_resume_max", 1.0)
 
         # variables for tilt control
-        self.roll_to_linear_scale = rospy.get_param("~roll_to_linear_scale", 1.0)
+        self.roll_to_linear_scale = rospy.get_param("~roll_to_linear_scale", -  1.0)
         self.pitch_to_angular_scale = rospy.get_param("~pitch_to_angular_scale", -3.0)
         self.pitch_deadband = rospy.get_param("~pitch_deadband", 0.4)
         self.roll_deadband = rospy.get_param("~roll_deadband", 0.4)
         self.pitch_offset = rospy.get_param("~pitch_offset", 0.2)
         self.roll_offset = rospy.get_param("~roll_offset", 0.2)
-        self.roll_center_offset = rospy.get_param("~roll_center_offset", 0.1)
+        self.roll_center_offset = rospy.get_param("~roll_center_offset", -0.05)
+        self.pitch_center_offset = rospy.get_param("~pitch_center_offset", -0.1)
         self.flag_reverse_mapping = rospy.get_param("~reverse_mapping", False)
 
         # randomization parameter for "get stuck"
@@ -214,6 +219,7 @@ class SimpleFollower:
     def human_input_tilt_cb(self, msg):
         self.human_input_tilt = msg
         self.human_input_tilt.x += self.roll_center_offset
+        self.human_input_tilt.y += self.pitch_center_offset
 
     def human_input_gesture_cb(self, msg):
         self.human_input_gesture = msg.data
@@ -277,7 +283,7 @@ class SimpleFollower:
             self.cmd_state_timer = rospy.get_time()
             self.cmd_state = "SendPeriod"
 
-    def send_haptic_msg(self, rep, t_render, t_pause):
+    def send_haptic_msg(self, dir, rep, t_render, t_pause):
         new_msg = haptic_msg()
 
         # calculate robot position in human's frame of reference
@@ -289,24 +295,37 @@ class SimpleFollower:
             phi += 2 * np.pi
 
         self.sys_msg_pub.publish("(" + str(x_r) + ", " + str(y_r) + ")    " + str(phi))
+        rospy.logwarn("(%f, %f),   %f", x_r, y_r, phi)
 
-        # calcualte direction and amplitude based on human position
+        # if specified direction and render time
+        if dir != -1:
+            new_msg.direction = dir
+            new_msg.amplitude = 2.5
+            new_msg.repetition = rep
+            new_msg.period_render = t_render
+            new_msg.period_pause = t_pause
+
+            self.haptic_msg_pub.publish(new_msg)
+            return
+
+        # otherwise calcualte direction and amplitude based on human position
         # id_map = np.array([1, 5, 2, 4, 0, 6, 3, 7])
-        for id in range(0, 8):
-            phi_d = id * np.pi / 4.0 - phi
-            if phi_d < -np.pi:
-                phi_d += 2 * np.pi
-            elif phi_d > np.pi:
-                phi_d -= 2 * np.pi
-            if np.abs(phi_d) <= np.pi / 8.0:
-                new_msg.direction = id
-                break
+        if 0.5 * np.pi < phi < 1.5 * np.pi:
+            new_msg.direction = 2
+        else:
+            new_msg.direction = 3
 
         new_msg.amplitude = 2.5  # self.human_pose.y / self.haptic_amp_thresh
 
+        # make the render time proportional to the magnitude of angle
+        delta_phi = np.abs(phi - 0.5 * np.pi)
+        if delta_phi > np.pi:
+            delta_phi = np.pi * 2.0 - delta_phi
+
+        new_msg.period_render = delta_phi / np.pi * 1.5
+
         # send haptic control message
         new_msg.repetition = rep
-        new_msg.period_render = t_render
         new_msg.period_pause = t_pause
 
         self.haptic_msg_pub.publish(new_msg)
@@ -353,7 +372,7 @@ class SimpleFollower:
             if self.lost_vision_count >= self.lost_vision_count_limit:
                 if self.set_follower_mode == 2:
                     # send haptic signal
-                    self.send_haptic_msg(3, 1.0, 1.0)
+                    self.send_haptic_msg(-1, 3, -1, 1.0)
 
                 # update stuck timer
                 self.period_stuck -= self.dt_following
@@ -368,14 +387,22 @@ class SimpleFollower:
         else:
             self.lost_vision_count = 0
 
+        # pause too fast check after notification
+        if self.flag_too_fast_pause:
+            self.too_fast_pause_count += 1
+            if self.too_fast_pause_count > self.too_fast_pause_limit:
+                self.flag_too_fast_pause = False
+                self.too_fast_pause_count = 0
+
         # check if human is walking too fast
-        if np.abs(self.cmd_vel.linear.x) > self.turtlebot_vel_max * 1.5:
+        if not self.flag_too_fast_pause and np.abs(self.cmd_vel.linear.x) > self.turtlebot_vel_max * 1.5:
             self.too_fast_count += 1
             if self.too_fast_count >= self.too_fast_count_limit:
                 if self.set_follower_mode == 2:
                     # send haptic signal
-                    self.send_haptic_msg(2, 0.5, 0.5)
+                    self.send_haptic_msg(1, 2, 0.5, 0.5)
 
+                self.flag_too_fast_pause = True
                 self.too_fast_count = 0
                 self.sys_msg_pub.publish("Human walking too fast!")
         else:
@@ -389,7 +416,7 @@ class SimpleFollower:
 
                 # send haptic signal
                 if self.set_follower_mode == 2:
-                    self.send_haptic_msg(5, 1.0, 1.0)
+                    self.send_haptic_msg(-1, 3, 1.0, 1.0)
 
                 self.state = "GetStuck"
                 self.sys_msg_pub.publish("Robot stuck (software)!")
@@ -401,7 +428,7 @@ class SimpleFollower:
             if self.stuck_count >= self.stuck_count_limit:
                 if self.set_follower_mode == 2:
                     # send haptic signal
-                    self.send_haptic_msg(5, 1.0, 1.0)
+                    self.send_haptic_msg(-1, 3, 1.0, 1.0)
 
                 self.stuck_backup_count = 0
                 self.send_vel_cmd(-0.5, 0, 1.0)

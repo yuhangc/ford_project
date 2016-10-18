@@ -74,44 +74,24 @@ void HapticController::hapticCallback(const ford_project::haptic_msg::ConstPtr& 
     switch (this->dir)
     {
     case 0:
-        // right, east
+        // forward
+        this->amp_max0 = 0;
+        this->amp_max1 = 1.0;
+        break;
+    case 1:
+        // backward
         this->amp_max0 = 0;
         this->amp_max1 = -1.0;
         break;
-    case 1:
-        // NE
-        this->amp_max0 = 0.707;
-        this->amp_max1 = -0.707;
-        break;
     case 2:
-        // up, north
+        // left/ccw
         this->amp_max0 = 1.0;
         this->amp_max1 = 0;
         break;
     case 3:
-        // NW
-        this->amp_max0 = 0.707;
-        this->amp_max1 = 0.707;
-        break;
-    case 4:
-        // left, west
-        this->amp_max0 = 0;
-        this->amp_max1 = 1.0;
-        break;
-    case 5:
-        // SW
-        this->amp_max0 = -0.707;
-        this->amp_max1 = 0.707;
-        break;
-    case 6:
-        // down, south
+        // right/cw
         this->amp_max0 = -1.0;
         this->amp_max1 = 0;
-        break;
-    case 7:
-        // SE
-        this->amp_max0 = -0.707;
-        this->amp_max1 = -0.707;
         break;
     }
     this->amp_max0 *= msg->amplitude;
@@ -212,7 +192,7 @@ void HapticController::render(double amp_max0, double amp_max1)
 
     ros::Duration(0.000001).sleep();
 
-    dacval = volts_USB31XX(BP_10_00V, amp1);
+    dacval = volts_USB31XX(BP_10_00V, amp1 * 0.2);
     usbAOut_USB31XX(this->hid_3101, this->a_out1, dacval, 0);
 }
 
