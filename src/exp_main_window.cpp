@@ -57,6 +57,7 @@ void ExpMainWindow::Init()
 
     // get parameters
     ros::param::param<std::string>("~data_file_path", this->data_file_path, "/home/rainbow/Desktop/data");
+    ros::param::param<std::string>("~protocal_file_path", this->protocal_file_path, ".");
 
     this->vel_inc_limit_lin = 0.02;
     this->vel_inc_limit_ang = 0.05;
@@ -403,4 +404,87 @@ void ExpMainWindow::on_button_reverse_mapping_clicked()
     std_msgs::Bool t_msg;
     t_msg.data = this->flag_reverse_mapping;
     this->reverse_mapping_pub.publish(t_msg);
+}
+
+// ============================================================================
+void ExpMainWindow::on_button_load_protocal_clicked()
+{
+    // open the file
+    char file_name[100];
+    std::sprintf(file_name, "%s/pre_study_protocal.txt", this->protocal_file_path.c_str());
+
+    std::ifstream t_protocal_file;
+    t_protocal_file.open(file_name);
+
+    // read in the total trial numbers
+    t_protocal_file >> this->num_trials;
+
+    this->dir_trial.clear();
+    for (int i = 0; i < this->num_trials; i++) {
+        int t_dir;
+        t_protocal_file >> t_dir;
+        this->dir_trial.push_back(t_dir);
+    }
+
+    // set and display the trial number
+    this->haptic_trial_count = 0;
+    ui->lineEdit_trial_num->setText(QString::number(this->haptic_trial_count));
+
+    // initialize the output file
+    std::sprintf(file_name, "%s/pre_study_data.txt", this->data_file_path.c_str());
+    this->haptic_data_file.open(file_name);
+}
+
+// ============================================================================
+void ExpMainWindow::on_button_play_haptic_clicked()
+{
+    // set haptic signal parameters
+    this->haptic_signal.amplitude = 2.5;
+    this->haptic_signal.direction = this->dir_trial[this->haptic_trial_count];
+    this->haptic_signal.repetition = 3;
+    this->haptic_signal.period_pause = 1.0;
+    this->haptic_signal.period_render = 1.0;
+
+    // publish the signal
+    this->haptic_control_pub.publish(this->haptic_signal);
+}
+
+// ============================================================================
+void ExpMainWindow::on_button_next_trial_clicked()
+{
+    // record data and proceed to next trial
+    this->haptic_data_file << this->dir_user << std::endl;
+    this->haptic_trial_count ++;
+
+    // close file if reach max trials
+    if (this->haptic_trial_count >= this->num_trials) {
+        this->haptic_data_file.close();
+        ui->lineEdit_trial_num->setText("Finished!");
+    } else {
+        ui->lineEdit_trial_num->setText(QString::number(this->haptic_trial_count));
+    }
+}
+
+// ============================================================================
+void ExpMainWindow::on_button_record_forward_clicked()
+{
+    this->dir_user = 0;
+}
+
+// ============================================================================
+void ExpMainWindow::on_button_record_backward_clicked()
+{
+    this->dir_user = 1;
+}
+
+// ============================================================================
+void ExpMainWindow::on_button_record_left_clicked()
+{
+    this->dir_user = 2;
+}
+
+// ============================================================================
+void ExpMainWindow::on_button_record_right_clicked()
+{
+    this->dir_user = 3;
 }

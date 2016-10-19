@@ -2,6 +2,8 @@
 #define EXP_MAIN_WINDOW_H
 
 #include <fstream>
+#include <vector>
+
 #include <QMainWindow>
 #include <QTimer>
 
@@ -84,6 +86,15 @@ private:
     // flag for reverse velocity mapping
     double flag_reverse_mapping;
 
+    // variables for haptic pre study
+    int haptic_trial_count;
+    int num_trials;
+    int dir_user;
+    std::vector<int> dir_trial;
+
+    std::string protocal_file_path;
+    std::ofstream haptic_data_file;
+
     // variable for data saving
     std::string data_file_path;
     std::ofstream data_file;
@@ -129,6 +140,13 @@ private slots:
     void on_button_start_condition_clicked();
     void on_button_stop_record_clicked();
     void on_button_reverse_mapping_clicked();
+    void on_button_load_protocal_clicked();
+    void on_button_play_haptic_clicked();
+    void on_button_next_trial_clicked();
+    void on_button_record_forward_clicked();
+    void on_button_record_backward_clicked();
+    void on_button_record_left_clicked();
+    void on_button_record_right_clicked();
 };
 
 #endif // EXP_MAIN_WINDOW_H

@@ -123,11 +123,11 @@ class SimpleFollower:
 
         # variables for tilt control
         self.roll_to_linear_scale = rospy.get_param("~roll_to_linear_scale", -  1.0)
-        self.pitch_to_angular_scale = rospy.get_param("~pitch_to_angular_scale", -3.0)
-        self.pitch_deadband = rospy.get_param("~pitch_deadband", 0.4)
-        self.roll_deadband = rospy.get_param("~roll_deadband", 0.4)
-        self.pitch_offset = rospy.get_param("~pitch_offset", 0.2)
-        self.roll_offset = rospy.get_param("~roll_offset", 0.2)
+        self.pitch_to_angular_scale = rospy.get_param("~pitch_to_angular_scale", -2.0)
+        self.pitch_deadband = rospy.get_param("~pitch_deadband", 0.2)
+        self.roll_deadband = rospy.get_param("~roll_deadband", 0.2)
+        self.pitch_offset = rospy.get_param("~pitch_offset", 0.15)
+        self.roll_offset = rospy.get_param("~roll_offset", 0.1)
         self.roll_center_offset = rospy.get_param("~roll_center_offset", -0.05)
         self.pitch_center_offset = rospy.get_param("~pitch_center_offset", -0.1)
         self.flag_reverse_mapping = rospy.get_param("~reverse_mapping", False)
