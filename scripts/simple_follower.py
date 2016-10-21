@@ -136,7 +136,7 @@ class SimpleFollower:
         self.flag_soft_stuck = rospy.get_param("~flag_software_stuck", 1)
         self.num_stuck_total = rospy.get_param("~number_get_stuck_total", 5)
         self.period_stuck_min = rospy.get_param("~period_stuck_min", 20)
-        self.period_stuck_max = rospy.get_param("~period_stuck_max", 60)
+        self.period_stuck_max = rospy.get_param("~period_stuck_max", 40)
 
         self.num_stuck = 0
         self.t_following_start = 0.0
@@ -395,7 +395,7 @@ class SimpleFollower:
                 self.too_fast_pause_count = 0
 
         # check if human is walking too fast
-        if not self.flag_too_fast_pause and np.abs(self.cmd_vel.linear.x) > self.turtlebot_vel_max * 1.5:
+        if not self.flag_too_fast_pause and np.abs(self.cmd_vel.linear.x) > self.turtlebot_vel_max * 2.0:
             self.too_fast_count += 1
             if self.too_fast_count >= self.too_fast_count_limit:
                 if self.set_follower_mode == 2:

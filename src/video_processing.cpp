@@ -23,7 +23,7 @@ VideoProcessor::VideoProcessor()
 
     ros::param::param<int>("~marker_id_robot", this->m_marker_id_robot, 11);
     ros::param::param<float>("~marker_size", this->m_marker_size, 0.19);
-    ros::param::param<float>("~min_area_contour_found", this->m_min_area_found, 2000);
+    ros::param::param<float>("~min_area_contour_found", this->m_min_area_found, 1000);
     ros::param::param<int>("~frame_rate", this->m_frame_rate, 60);
 
     int t_default_id[] = {40, 50, 60, 70};
@@ -75,7 +75,7 @@ void VideoProcessor::init(std::string file_path)
 
     // open the video
     file_name = file_path;
-    file_name.append("/cond2.mp4");
+    file_name.append("/cond_haptics.MP4");
     this->m_video_capture.open(file_name);
 }
 
@@ -124,7 +124,7 @@ void VideoProcessor::calibrate(std::string file_name)
     std::getchar();
 
     // write the positions of each marker to file
-    for (int i = 0; i < NUM_MARKER_CALIBRATION; i++) {
+    for (int i = 0; i < this->m_markers.size(); i++) {
         this->m_calibration_data << this->m_markers[i].id << ",  "
                                  << this->m_markers[i].Tvec.at<float>(0, 0) << ",  "
                                  << this->m_markers[i].Tvec.at<float>(1, 0) << ",  "
@@ -139,7 +139,6 @@ void VideoProcessor::calibrate(std::string file_name)
 void VideoProcessor::get_path(std::string file_name)
 {
     cv::Mat t_image_input = cv::imread(file_name);
-//    this->m_image_input = cv::imread(file_name);
     cv::undistort(t_image_input, this->m_image_input, this->m_cam_param.CameraMatrix, this->m_cam_param.Distorsion);
 
     // color segmentation
@@ -147,7 +146,7 @@ void VideoProcessor::get_path(std::string file_name)
     cv::cvtColor(this->m_image_input, t_image_hsv, CV_BGR2HSV);
 
     cv::Mat t_color_mask;
-    cv::inRange(t_image_hsv, cv::Scalar(60, 100, 100), cv::Scalar(90, 255, 255), t_color_mask);
+    cv::inRange(t_image_hsv, cv::Scalar(30, 50, 50), cv::Scalar(60, 255, 255), t_color_mask);
 
     // opening filter to remove small objects (false positives)
     cv::erode(t_color_mask, t_color_mask, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)));
@@ -157,19 +156,11 @@ void VideoProcessor::get_path(std::string file_name)
     cv::dilate(t_color_mask, t_color_mask, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)));
     cv::erode(t_color_mask, t_color_mask, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)));
 
-//    //! don't use the left part of the image since they are not path
-//    cv::Mat t_roi = t_color_mask.colRange(0, 199);
-//    t_roi.setTo(0);
-//    t_roi = t_color_mask.colRange(199, 220).rowRange(0, 100);
-//    t_roi.setTo(0);
-//    t_roi = t_color_mask.colRange(199, 230).rowRange(975, 1080);
-//    t_roi.setTo(0);
-
-    cv::Mat t_mask;
-    cv::resize(t_color_mask, t_mask, cv::Size(), 0.5, 0.5);
-    cv::imshow("test", t_mask * 255);
+    cv::Mat t_out_image, t_mask;
+    cv::bitwise_and(this->m_image_input, this->m_image_input, t_mask, t_color_mask);
+    cv::resize(t_mask, t_out_image, cv::Size(), 0.5, 0.5);
+    cv::imshow("test", t_out_image);
     cv::waitKey(500);
-    std::cout << this->m_image_input.size() << std::endl;
     std::getchar();
 
     // record all non-zero coordinates in the mask
@@ -187,7 +178,7 @@ bool VideoProcessor::get_frame()
 {
     this->m_frame_count ++;
 //    std::cout << this->m_frame_count << std::endl;
-    ROS_INFO("processing frame %d...", this->m_frame_count);
+    ROS_ERROR("processing frame %d...", this->m_frame_count);
 
     if (this->m_video_capture.grab()) {
         this->m_video_capture.retrieve(this->m_image_input);
@@ -357,12 +348,11 @@ int main(int argc, char** argv)
 
     VideoProcessor video_processor;
 
-    video_processor.init("/home/yuhangche/Desktop/exp_video/pilot1");
-//    video_processor.calibrate("/home/yuhangche/Desktop/exp_video/pilot1/calibration.JPG");
-//    video_processor.get_path("/home/yuhangche/Desktop/exp_video/pilot1/calibration1.jpg");
+    video_processor.init("/home/yuhangche/Desktop/exp_video/pilot2");
+    video_processor.calibrate("/home/yuhangche/Desktop/exp_video/pilot2/calibration.JPG");
+    video_processor.get_path("/home/yuhangche/Desktop/exp_video/pilot2/calibration1.jpg");
 
     while (video_processor.get_frame() && !ros::isShuttingDown()) {
-//        video_processor.get_frame();
         video_processor.get_human_pos();
         video_processor.get_robot_pos();
     }
