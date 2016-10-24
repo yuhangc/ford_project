@@ -63,6 +63,7 @@ private:
     // publishers
     ros::Publisher set_robot_state_pub;
     ros::Publisher set_condition_pub;
+    ros::Publisher set_stuck_mode_pub;
     ros::Publisher haptic_control_pub;
     ros::Publisher cmd_vel_pub;
     ros::Publisher reverse_mapping_pub;
@@ -72,6 +73,7 @@ private:
 
     // set condition
     int set_condition;
+    int set_stuck_mode;
 
     // haptic signal
     ford_project::haptic_msg haptic_signal;
@@ -136,7 +138,6 @@ private slots:
     void on_spinBox_haptic_off_valueChanged(double arg1);
     void on_button_send_haptic_clicked();
     void on_combo_haptic_mag_currentIndexChanged(int index);
-    void on_combo_exp_condition_currentIndexChanged(int index);
     void on_button_start_condition_clicked();
     void on_button_stop_record_clicked();
     void on_button_reverse_mapping_clicked();
@@ -147,6 +148,8 @@ private slots:
     void on_button_record_backward_clicked();
     void on_button_record_left_clicked();
     void on_button_record_right_clicked();
+    void on_combo_stuck_mode_currentIndexChanged(int index);
+    void on_combo_tether_condition_currentIndexChanged(int index);
 };
 
 #endif // EXP_MAIN_WINDOW_H

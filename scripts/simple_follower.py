@@ -13,16 +13,16 @@ from std_msgs.msg import Int8
 from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
 from kobuki_msgs.msg import BumperEvent
-from kobuki_msgs.msg import Led
-from kobuki_msgs.msg import DigitalOutput
 
 from ford_project.msg import haptic_msg
 
 states_all = {0: "Idle",
               1: "Follow",
               2: "LostVision",
-              3: "GetStuck",
-              4: "Teleop"}  # teleop state is only for testing
+              3: "StuckObstacle",
+              4: "StuckSoftware",
+              5: "StuckTooFast",
+              6: "Teleop"}  # teleop state is only for testing
 
 cmd_states_all = {0: "Idle",
                   1: "SendOnce",
@@ -30,13 +30,6 @@ cmd_states_all = {0: "Idle",
 
 input_mode_all = {1: "gesture_control",
                   0: "tilt_control"}
-
-gesture_dict = {0: "twist",
-                1: "right_cw",
-                2: "forward",
-                3: "backward",
-                4: "start",
-                5: "stop"}
 
 
 class SimpleFollower:
@@ -53,7 +46,7 @@ class SimpleFollower:
         # 0 - Teleoperation
         # 1 - Autonomous
         # 2 - Haptic Tether
-        self.set_follower_mode = 2
+        self.follower_mode = 2
 
         # timer for state machine
         self.cmd_state_timer = rospy.get_time()
@@ -75,8 +68,13 @@ class SimpleFollower:
         self.stuck_backup_count_limit = 50
         self.stuck_count_limit = rospy.get_param("~stuck_count_limit", 25)
         self.lost_vision_count_limit = rospy.get_param("~lost_vision_count_limit", 25)
-        self.too_fast_count_limit = rospy.get_param("~too_fast_count_limit", 25)
+        self.too_fast_count_limit_low = rospy.get_param("~too_fast_count_limit_low", 25)
+        self.too_fast_count_limit_high = rospy.get_param("~too_fast_count_limit_high", 45)
         self.turtlebot_vel_max = rospy.get_param("~turtlebot_vel_max", 0.7)
+
+        # a little bit of hysteresis
+        self.too_fast_threshold_low = rospy.get_param("~too_fast_threshold_low", self.turtlebot_vel_max * 1.4)
+        self.too_fast_threshold_high = rospy.get_param("~too_fast_threshold_high", self.turtlebot_vel_max * 1.5)
 
         # desired velocity for publish
         self.cmd_vel = Twist()
@@ -133,11 +131,13 @@ class SimpleFollower:
         self.flag_reverse_mapping = rospy.get_param("~reverse_mapping", False)
 
         # randomization parameter for "get stuck"
-        self.flag_soft_stuck = rospy.get_param("~flag_software_stuck", 1)
+        # stuck mode - 0: no software stuck, 1 - too fast stuck, 2 - random stuck, 3 - both
+        self.stuck_mode = rospy.get_param("~stuck_mode", 0)
         self.num_stuck_total = rospy.get_param("~number_get_stuck_total", 5)
         self.period_stuck_min = rospy.get_param("~period_stuck_min", 20)
         self.period_stuck_max = rospy.get_param("~period_stuck_max", 40)
 
+        self.flag_soft_stuck = False
         self.num_stuck = 0
         self.t_following_start = 0.0
         self.period_stuck = 0.0
@@ -174,6 +174,10 @@ class SimpleFollower:
         self.follower_mode_control_sub = rospy.Subscriber("state_control/set_follower_mode",
                                                           Int8, self.follower_mode_control_cb)
 
+        # subscriber to "stuck mode" control
+        self.stuck_mode_control_sub = rospy.Subscriber("state_control/set_stuck_mode",
+                                                       Int8, self.stuck_mode_control_cb)
+
         # subscribe to the bumper event
         self.bumper_event_sub = rospy.Subscriber("mobile_base/events/bumper",
                                                  BumperEvent, self.bumper_event_cb)
@@ -190,15 +194,13 @@ class SimpleFollower:
         self.sys_msg_pub = rospy.Publisher("sys_message",
                                            String, queue_size=1)
 
-        # publisher to base LED and digital output
-        self.LED1_pub = rospy.Publisher("mobile_base/commands/led1",
-                                        Led, queue_size=1)
-        self.digital_out_pub = rospy.Publisher("mobile_base/commands/digital_output",
-                                               DigitalOutput, queue_size=1)
-
     # call back functions
     def follower_mode_control_cb(self, follower_mode_control_msg):            
-        self.set_follower_mode = follower_mode_control_msg.data
+        self.follower_mode = follower_mode_control_msg.data
+
+    def stuck_mode_control_cb(self, stuck_mode_control_msg):
+        self.stuck_mode = stuck_mode_control_msg.data
+        self.sys_msg_pub.publish("switch to stuck mode " + str(self.stuck_mode))
 
     def human_track_pose_cb(self, msg):
         self.human_pose = msg
@@ -223,13 +225,6 @@ class SimpleFollower:
 
     def human_input_gesture_cb(self, msg):
         self.human_input_gesture = msg.data
-
-        # check if set to start/stop
-        if gesture_dict[self.human_input_gesture] == "twist":
-            if self.state == "Idle":
-                self.set_state = 1
-            else:
-                self.set_state = 0
 
     def button_event_cb(self, msg):
         if msg.data == 2:
@@ -342,6 +337,9 @@ class SimpleFollower:
             self.state = "Teleop"
 
     def set_stuck_param(self):
+        if (self.stuck_mode & 0x02) == 0:
+            return
+
         self.t_following_start = rospy.get_time()
         self.period_stuck = np.random.randint(self.period_stuck_min, self.period_stuck_max)
         self.sys_msg_pub.publish("start time: " + str(self.t_following_start) + "period: " + str(self.period_stuck))
@@ -370,7 +368,7 @@ class SimpleFollower:
         if self.track_status == "Lost":
             self.lost_vision_count += 1
             if self.lost_vision_count >= self.lost_vision_count_limit:
-                if self.set_follower_mode == 2:
+                if self.follower_mode == 2:
                     # send haptic signal
                     self.send_haptic_msg(-1, 3, -1, 1.0)
 
@@ -379,7 +377,7 @@ class SimpleFollower:
 
                 # set robot to stop and go to state lost vision
                 self.lost_vision_count = 0
-                self.send_vel_cmd(0, 0, 0.5)
+                self.send_vel_cmd(0, 0)
                 self.state = "LostVision"
                 rospy.logwarn("Lost vision of human!")
                 self.sys_msg_pub.publish("Lost vision of human!")
@@ -387,38 +385,42 @@ class SimpleFollower:
         else:
             self.lost_vision_count = 0
 
-        # pause too fast check after notification
-        if self.flag_too_fast_pause:
-            self.too_fast_pause_count += 1
-            if self.too_fast_pause_count > self.too_fast_pause_limit:
-                self.flag_too_fast_pause = False
-                self.too_fast_pause_count = 0
-
         # check if human is walking too fast
-        if not self.flag_too_fast_pause and np.abs(self.cmd_vel.linear.x) > self.turtlebot_vel_max * 2.0:
+        if np.abs(self.cmd_vel.linear.x) > self.too_fast_threshold_high:
             self.too_fast_count += 1
-            if self.too_fast_count >= self.too_fast_count_limit:
-                if self.set_follower_mode == 2:
+            if self.too_fast_count == self.too_fast_count_limit_low:
+                if self.follower_mode == 2:
                     # send haptic signal
                     self.send_haptic_msg(1, 2, 0.5, 0.5)
 
-                self.flag_too_fast_pause = True
-                self.too_fast_count = 0
                 self.sys_msg_pub.publish("Human walking too fast!")
-        else:
+
+            if (self.stuck_mode & 0x01) != 0 and self.too_fast_count >= self.too_fast_count_limit_high:
+                # force the robot to "stuck" since human is walking too fast
+                self.too_fast_count = 0
+                self.send_vel_cmd(0.0, 0.0)
+
+                self.state = "StuckTooFast"
+                self.flag_soft_stuck = True
+                self.sys_msg_pub.publish("Robot stuck (human too fast)!")
+                return
+        elif np.abs(self.cmd_vel.linear.x) <= self.too_fast_threshold_low:
             self.too_fast_count = 0
 
         # check for "stuck" set by software
-        if self.flag_soft_stuck > 0:
+        if (self.stuck_mode & 0x02) != 0:
             # use software to simulate stuck
             if self.dt_following > self.period_stuck:
                 self.num_stuck += 1
 
                 # send haptic signal
-                if self.set_follower_mode == 2:
+                if self.follower_mode == 2:
                     self.send_haptic_msg(-1, 3, 1.0, 1.0)
 
-                self.state = "GetStuck"
+                self.send_vel_cmd(0.0, 0.0)
+
+                self.state = "StuckSoftware"
+                self.flag_soft_stuck = True
                 self.sys_msg_pub.publish("Robot stuck (software)!")
                 return
 
@@ -426,13 +428,13 @@ class SimpleFollower:
         if self.bumper_event.state == BumperEvent.PRESSED:
             self.stuck_count += 1
             if self.stuck_count >= self.stuck_count_limit:
-                if self.set_follower_mode == 2:
+                if self.follower_mode == 2:
                     # send haptic signal
                     self.send_haptic_msg(-1, 3, 1.0, 1.0)
 
                 self.stuck_backup_count = 0
                 self.send_vel_cmd(-0.5, 0, 1.0)
-                self.state = "GetStuck"
+                self.state = "StuckObstacle"
                 # rospy.logwarn("Robot stuck!")
                 self.sys_msg_pub.publish("Robot stuck!")
                 return
@@ -460,14 +462,14 @@ class SimpleFollower:
                 self.t_following_start = rospy.get_time()
 
         # do teleop
-        if self.set_follower_mode == 2:
+        if self.follower_mode == 2:
             self.teleop()
         else:
             self.check_set_state()
 
-    def get_stuck(self):
+    def stuck(self):
         # backup and try to follow again
-        if self.stuck_backup_count < self.stuck_backup_count_limit and self.flag_soft_stuck == 0:
+        if not self.flag_soft_stuck and self.stuck_backup_count < self.stuck_backup_count_limit:
             self.stuck_backup_count += 1
         else:
             # has to be set to follow manually
@@ -481,22 +483,14 @@ class SimpleFollower:
                         self.set_stuck_param()
 
         # do teleoperation
-        if self.set_follower_mode == 2:
+        if self.follower_mode == 2:
             self.teleop()
         else:
             self.check_set_state()
 
-    # method for digital output
-    def digital_write(self, channel, value):
-        t_digital_out = DigitalOutput()
-        t_digital_out.mask[channel] = 1
-        t_digital_out.values[channel] = value
-
-        self.digital_out_pub.publish(t_digital_out)
-
     def teleop(self):
         # rospy.loginfo("in teleoperation")
-        if self.set_follower_mode != 0:
+        if self.follower_mode != 0:
             # do not switch to other states when in teleoperation condition
             self.check_set_state()
 
@@ -538,27 +532,24 @@ class SimpleFollower:
         if self.state == "Idle":
             self.idle()
             current_state.data = 0
-            self.LED1_pub.publish(Led.BLACK)
-            self.digital_write(0, 1)
         elif self.state == "Follow":
             self.follow()
             current_state.data = 1
-            self.LED1_pub.publish(Led.GREEN)
-            self.digital_write(0, 1)
         elif self.state == "LostVision":
             self.lost_vision()
             current_state.data = 2
-            self.LED1_pub.publish(Led.ORANGE)
-            self.digital_write(0, 1)
-        elif self.state == "GetStuck":
-            self.get_stuck()
+        elif self.state == "StuckObstacle":
+            self.stuck()
             current_state.data = 3
-            self.LED1_pub.publish(Led.RED)
-            self.digital_write(0, 0)
+        elif self.state == "StuckSoftware":
+            self.stuck()
+            current_state.data = 4
+        elif self.state == "StuckTooFast":
+            self.stuck()
+            current_state.data = 5
         elif self.state == "Teleop":
             self.teleop()
-            current_state.data = 4
-            self.LED1_pub.publish(Led.BLACK)
+            current_state.data = 6
         else:
             rospy.logerr("Unknown state!")
 
@@ -573,7 +564,11 @@ class SimpleFollower:
                 self.vision_led.set_color(name="green")
             elif self.state == "LostVision":
                 self.vision_led.set_color(name="red")
-            elif self.state == "GetStuck":
+            elif self.state == "StuckObstacle":
+                self.vision_led.set_color(name="purple")
+            elif self.state == "StuckSoftware":
+                self.vision_led.set_color(name="purple")
+            elif self.state == "StuckTooFast":
                 self.vision_led.set_color(name="purple")
             elif self.state == "Teleop":
                 self.vision_led.set_color(name="blue")

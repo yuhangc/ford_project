@@ -7,8 +7,8 @@
   	<param name="t_step" type="double" value="0.004"/>
   	<param name="t_ramp" type="double" value="0.015"/>
   </node>
-  <node pkg="ford_project" type="gesture_DTW" name="gesture_detector">
+  <!--node pkg="ford_project" type="gesture_DTW" name="gesture_detector">
   	<param name="gesture_data_path" value="$(find ford_project)/gesture_data"/>
-  </node>
+  </node-->
   <node pkg="ford_project" type="button_detect.py" name="button_event_detector"/>
 </launch>

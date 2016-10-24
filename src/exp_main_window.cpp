@@ -52,6 +52,7 @@ void ExpMainWindow::Init()
     // initialize publishers
     this->set_robot_state_pub = this->nh.advertise<std_msgs::Int8>("/state_control/set_state", 1);
     this->set_condition_pub = this->nh.advertise<std_msgs::Int8>("/state_control/set_follower_mode", 1);
+    this->set_stuck_mode_pub = this->nh.advertise<std_msgs::Int8>("/state_control/set_stuck_mode", 1);
     this->haptic_control_pub = this->nh.advertise<ford_project::haptic_msg>("/haptic_control", 1);
     this->reverse_mapping_pub = this->nh.advertise<std_msgs::Bool>("/human_input/reverse_mapping", 1);
 
@@ -118,10 +119,18 @@ void ExpMainWindow::robot_state_callback(const std_msgs::Int8::ConstPtr &state_m
         ui->label_robot_state->setStyleSheet("QLabel { background-color : red; color : black; }");
         break;
     case 3:
-        ui->label_robot_state->setText("Robot Stuck!");
+        ui->label_robot_state->setText("Stuck by obstacle!");
         ui->label_robot_state->setStyleSheet("QLabel { background-color : purple; color : black; }");
         break;
     case 4:
+        ui->label_robot_state->setText("Stuck by software!");
+        ui->label_robot_state->setStyleSheet("QLabel { background-color : purple; color : black; }");
+        break;
+    case 5:
+        ui->label_robot_state->setText("Stuck human too fast!");
+        ui->label_robot_state->setStyleSheet("QLabel { background-color : purple; color : black; }");
+        break;
+    case 6:
         ui->label_robot_state->setText("Teleoperation");
         ui->label_robot_state->setStyleSheet("QLabel { background-color : white; color : black; }");
         break;
@@ -325,18 +334,10 @@ void ExpMainWindow::on_combo_haptic_mag_currentIndexChanged(int index)
 }
 
 // ============================================================================
-void ExpMainWindow::on_combo_exp_condition_currentIndexChanged(int index)
-{
-    // 0 - Teleoperation
-    // 1 - Autonomous
-    // 2 - Haptic Tether
-    this->set_condition = index;
-}
-
-// ============================================================================
 void ExpMainWindow::on_button_start_condition_clicked()
 {
     std_msgs::Int8 t_set_condition;
+    std_msgs::Int8 t_set_stuck_mode;
     switch (this->set_condition) {
     // teleoperation
     case 0:
@@ -356,7 +357,7 @@ void ExpMainWindow::on_button_start_condition_clicked()
         this->set_condition_pub.publish(t_set_condition);
 
         // delay 0.1 second and then set state to idle
-        ros::Duration(0.1).sleep();
+        ros::Duration(0.2).sleep();
         this->set_state.data = 0;
         this->set_robot_state_pub.publish(this->set_state);
 
@@ -368,12 +369,15 @@ void ExpMainWindow::on_button_start_condition_clicked()
         this->set_condition_pub.publish(t_set_condition);
 
         // delay 0.1 second and then set state to idle
-        ros::Duration(0.1).sleep();
+        ros::Duration(0.2).sleep();
         this->set_state.data = 0;
         this->set_robot_state_pub.publish(this->set_state);
 
         break;
     }
+
+    t_set_stuck_mode.data = this->set_stuck_mode;
+    this->set_stuck_mode_pub.publish(t_set_stuck_mode);
 
     // open file to save data and set data saving flag to be true
     this->file_count ++;
@@ -487,4 +491,16 @@ void ExpMainWindow::on_button_record_left_clicked()
 void ExpMainWindow::on_button_record_right_clicked()
 {
     this->dir_user = 3;
+}
+
+// ============================================================================
+void ExpMainWindow::on_combo_stuck_mode_currentIndexChanged(int index)
+{
+    this->set_stuck_mode = index;
+}
+
+// ============================================================================
+void ExpMainWindow::on_combo_tether_condition_currentIndexChanged(int index)
+{
+    this->set_condition = index;
 }

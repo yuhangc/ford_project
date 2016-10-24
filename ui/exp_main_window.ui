@@ -632,12 +632,12 @@
        <item row="2" column="0">
         <widget class="QLabel" name="label_59">
          <property name="text">
-          <string>Exp Condition</string>
+          <string>Tether Condition:</string>
          </property>
         </widget>
        </item>
        <item row="2" column="1">
-        <widget class="QComboBox" name="combo_exp_condition">
+        <widget class="QComboBox" name="combo_tether_condition">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -738,6 +738,43 @@
           </widget>
          </item>
         </layout>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_60">
+         <property name="text">
+          <string>Stuck Condition:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QComboBox" name="combo_stuck_mode">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>1</verstretch>
+          </sizepolicy>
+         </property>
+         <item>
+          <property name="text">
+           <string>No software stuck</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Too fast stuck</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Random stuck</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Both</string>
+          </property>
+         </item>
+        </widget>
        </item>
       </layout>
      </widget>
