@@ -60,16 +60,14 @@ class SimpleFollower:
         self.stuck_backup_count = 0
         self.lost_vision_count = 0
         self.too_fast_count = 0
-        self.too_fast_pause_count = 0
-
-        self.too_fast_pause_limit = 100
-        self.flag_too_fast_pause = False
+        self.slow_down_count = 0
         
         self.stuck_backup_count_limit = 50
         self.stuck_count_limit = rospy.get_param("~stuck_count_limit", 25)
         self.lost_vision_count_limit = rospy.get_param("~lost_vision_count_limit", 25)
         self.too_fast_count_limit_low = rospy.get_param("~too_fast_count_limit_low", 25)
         self.too_fast_count_limit_high = rospy.get_param("~too_fast_count_limit_high", 45)
+        self.slow_down_count_limit = rospy.get_param("~slow_down_count_limit", 25)
         self.turtlebot_vel_max = rospy.get_param("~turtlebot_vel_max", 0.7)
 
         # a little bit of hysteresis
@@ -115,7 +113,7 @@ class SimpleFollower:
         self.kb_angular = rospy.get_param("~kb_angular", 0.2)
 
         self.dist_range_min = rospy.get_param("~dist_range_min", 0.3)
-        self.dist_range_max = rospy.get_param("~dist_range_max", 5.0)
+        self.dist_range_max = rospy.get_param("~dist_range_max", 2.5)
 
         self.dist_stuck_resume_max = rospy.get_param("~dist_stuck_resume_max", 1.0)
 
@@ -405,7 +403,10 @@ class SimpleFollower:
                 self.sys_msg_pub.publish("Robot stuck (human too fast)!")
                 return
         elif np.abs(self.cmd_vel.linear.x) <= self.too_fast_threshold_low:
-            self.too_fast_count = 0
+            self.slow_down_count += 1
+            if self.slow_down_count >= self.slow_down_count_limit:
+                self.too_fast_count = 0
+                self.slow_down_count = 0
 
         # check for "stuck" set by software
         if (self.stuck_mode & 0x02) != 0:
