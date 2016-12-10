@@ -6,7 +6,7 @@
 
 #define sqrt_12 0.70710678118
 #define PI 3.141592653589793
-// #define DRAW_MARKER
+#define DRAW_MARKER
 
 // ============================================================================
 // constructor
@@ -211,9 +211,9 @@ void ArucoTracker::update()
         this->m_body_pose_last.y = this->m_body_pose.y;
     }
 
-//    cv::imshow("test", t_color_mask);
-//    cv::waitKey(30);
-//    std::getchar();
+    cv::imshow("test", t_color_mask);
+    cv::waitKey(30);
+    std::getchar();
 
     // detect the markers
     this->m_markers = this->m_detector.detect(this->m_image_input, this->m_cam_param, this->m_marker_size);
@@ -242,7 +242,7 @@ void ArucoTracker::update()
 #ifdef DRAW_MARKER
     // draw marker boundaries
     cv::Mat t_output_image;
-    t_color_mask.copyTo(t_output_image);
+    this->m_image_input.copyTo(t_output_image);
 
     for (int i = 0; i < this->m_markers.size(); i++) {
         this->m_markers[i].draw(t_output_image, cv::Scalar(0, 0, 255), 1);
@@ -257,7 +257,7 @@ void ArucoTracker::update()
     }
 
     // display the image
-    cv::imshow("test", t_output_image);
+    cv::imshow("test2", t_output_image);
     cv::waitKey(3);
 #endif
 

@@ -56,7 +56,12 @@ private:
     ros::Subscriber imu_mag_sub;
     ros::Subscriber imu_tilt_sub;
 
+    ros::Subscriber button_data_sub;
+    ros::Subscriber button_event_sub;
+
     ros::Subscriber gesture_rec_sub;
+
+    ros::Subscriber haptic_control_sub;
 
     ros::Subscriber sys_msg_sub;
 
@@ -77,6 +82,11 @@ private:
 
     // haptic signal
     ford_project::haptic_msg haptic_signal;
+    ford_project::haptic_msg haptic_signal_input;
+
+    // button data and event
+    bool button_data;
+    int button_event;
 
     // set velocities
     double vel_inc_limit_lin;
@@ -120,8 +130,12 @@ private:
     void imu_gyro_callback(const geometry_msgs::Vector3::ConstPtr& gyro_msg);
     void imu_mag_callback(const geometry_msgs::Vector3::ConstPtr& mag_msg);
     void imu_tilt_callback(const geometry_msgs::Vector3::ConstPtr& tilt_msg);
+    void button_data_callback(const std_msgs::Bool::ConstPtr& button_msg);
+    void button_event_callback(const std_msgs::Int8::ConstPtr& button_event_msg);
 
     void gesture_rec_callback(const std_msgs::Int8::ConstPtr& gesture_msg);
+
+    void haptic_control_callback(const ford_project::haptic_msg::ConstPtr& haptic_msg);
 
     void sys_msg_callback(const std_msgs::String::ConstPtr& sys_msg);
 

@@ -75,7 +75,7 @@ void VideoProcessor::init(std::string file_path)
 
     // open the video
     file_name = file_path;
-    file_name.append("/cond_haptics.MP4");
+    file_name.append("/cond1_no_haptics.MP4");
     this->m_video_capture.open(file_name);
 }
 
@@ -348,11 +348,12 @@ int main(int argc, char** argv)
 
     VideoProcessor video_processor;
 
-    video_processor.init("/home/yuhangche/Desktop/exp_video/pilot2");
-    video_processor.calibrate("/home/yuhangche/Desktop/exp_video/pilot2/calibration.JPG");
-    video_processor.get_path("/home/yuhangche/Desktop/exp_video/pilot2/calibration1.jpg");
+    video_processor.init("/home/yuhangche/Desktop/exp_video/user7");
+    video_processor.calibrate("/home/yuhangche/Desktop/exp_video/user7/calibration.JPG");
+    video_processor.get_path("/home/yuhangche/Desktop/exp_video/user7/calibration1.jpg");
 
     while (video_processor.get_frame() && !ros::isShuttingDown()) {
+        video_processor.get_frame();
         video_processor.get_human_pos();
         video_processor.get_robot_pos();
     }

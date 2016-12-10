@@ -42,9 +42,16 @@ void ExpMainWindow::Init()
                                                                    &ExpMainWindow::imu_mag_callback, this);
     this->imu_tilt_sub = this->nh.subscribe<geometry_msgs::Vector3>("/human_input/tilt", 1,
                                                                     &ExpMainWindow::imu_tilt_callback, this);
+    this->button_data_sub = this->nh.subscribe<std_msgs::Bool>("/human_input/button", 1,
+                                                               &ExpMainWindow::button_data_callback, this);
+    this->button_event_sub = this->nh.subscribe<std_msgs::Int8>("/human_input/button_event", 1,
+                                                               &ExpMainWindow::button_event_callback, this);
 
     this->gesture_rec_sub = this->nh.subscribe<std_msgs::Int8>("/human_input/gesture", 1,
                                                                &ExpMainWindow::gesture_rec_callback, this);
+
+    this->haptic_control_sub = this->nh.subscribe<ford_project::haptic_msg>("/haptic_control", 1,
+                                                                            &ExpMainWindow::haptic_control_callback, this);
 
     this->sys_msg_sub = this->nh.subscribe<std_msgs::String>("/sys_message", 1,
                                                              &ExpMainWindow::sys_msg_callback, this);
@@ -80,6 +87,13 @@ void ExpMainWindow::Init()
     // data saving flag
     this->flag_start_data_saving = false;
     this->file_count = 0;
+
+    this->button_data = false;
+    this->button_event = 0;
+    this->haptic_signal_input = ford_project::haptic_msg();
+
+    this->set_condition = 0;
+    this->set_stuck_mode = 0;
 }
 
 // ============================================================================
@@ -91,8 +105,20 @@ void ExpMainWindow::UpdateGUIInfo()
     // record data if necessary
     if (this->flag_start_data_saving) {
         this->data_file << (ros::Time().now())// - this->time_start_data_saving)
-                           << ", " << this->robot_state << std::endl;
+                           << ", " << this->robot_state
+                           << ", " << this->button_data
+                           << ", " << this->button_event
+                           << ", " << this->haptic_signal_input.amplitude
+                           << ", " << unsigned(this->haptic_signal_input.direction)
+                           << ", " << unsigned(this->haptic_signal_input.repetition)
+                           << ", " << this->haptic_signal_input.period_pause
+                           << ", " << this->haptic_signal_input.period_render
+                           << std::endl;
     }
+
+    // reset some of the data
+    this->button_event = 0;
+    this->haptic_signal_input = ford_project::haptic_msg();
 
     if (ros::isShuttingDown()) {
         this->close();
@@ -212,6 +238,18 @@ void ExpMainWindow::imu_tilt_callback(const geometry_msgs::Vector3::ConstPtr &ti
 }
 
 // ============================================================================
+void ExpMainWindow::button_data_callback(const std_msgs::Bool::ConstPtr &button_msg)
+{
+    this->button_data = button_msg->data;
+}
+
+// ============================================================================
+void ExpMainWindow::button_event_callback(const std_msgs::Int8::ConstPtr &button_event_msg)
+{
+    this->button_event = button_event_msg->data;
+}
+
+// ============================================================================
 void ExpMainWindow::gesture_rec_callback(const std_msgs::Int8::ConstPtr &gesture_msg)
 {
     switch (gesture_msg->data)
@@ -235,6 +273,15 @@ void ExpMainWindow::gesture_rec_callback(const std_msgs::Int8::ConstPtr &gesture
         ui->lineEdit_gesture_rec->setText("Recognized Gesgure: Stop Following");
         break;
     }
+}
+// ============================================================================
+void ExpMainWindow::haptic_control_callback(const ford_project::haptic_msg::ConstPtr &haptic_msg)
+{
+    this->haptic_signal_input.amplitude = haptic_msg->amplitude;
+    this->haptic_signal_input.direction = haptic_msg->direction;
+    this->haptic_signal_input.repetition = haptic_msg->repetition;
+    this->haptic_signal_input.period_pause = haptic_msg->period_pause;
+    this->haptic_signal_input.period_render = haptic_msg->period_render;
 }
 
 // ============================================================================
@@ -379,10 +426,16 @@ void ExpMainWindow::on_button_start_condition_clicked()
     t_set_stuck_mode.data = this->set_stuck_mode;
     this->set_stuck_mode_pub.publish(t_set_stuck_mode);
 
+    // if file is open, close it first
+    if (this->data_file.is_open()) {
+        this->data_file.close();
+    }
+
     // open file to save data and set data saving flag to be true
     this->file_count ++;
     char file_name[50];
-    std::sprintf(file_name, "%s/test%d_cond%d.txt", this->data_file_path.c_str(), this->file_count, this->set_condition);
+    std::sprintf(file_name, "%s/test%d_cond%d_%d.txt", this->data_file_path.c_str(),
+                 this->file_count, this->set_condition, this->set_stuck_mode);
 
     this->data_file.open(file_name);
     this->flag_start_data_saving = true;

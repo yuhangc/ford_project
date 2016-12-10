@@ -61,12 +61,16 @@ class SimpleFollower:
         self.lost_vision_count = 0
         self.too_fast_count = 0
         self.slow_down_count = 0
-        
+        self.too_fast_pause_count = 0
+
+        self.flag_too_fast_check_pause = False
+
         self.stuck_backup_count_limit = 50
         self.stuck_count_limit = rospy.get_param("~stuck_count_limit", 25)
         self.lost_vision_count_limit = rospy.get_param("~lost_vision_count_limit", 25)
         self.too_fast_count_limit_low = rospy.get_param("~too_fast_count_limit_low", 25)
         self.too_fast_count_limit_high = rospy.get_param("~too_fast_count_limit_high", 45)
+        self.too_fast_pause_count_limit = rospy.get_param("~too_fast_pause_count_limit", 65)
         self.slow_down_count_limit = rospy.get_param("~slow_down_count_limit", 25)
         self.turtlebot_vel_max = rospy.get_param("~turtlebot_vel_max", 0.7)
 
@@ -113,7 +117,7 @@ class SimpleFollower:
         self.kb_angular = rospy.get_param("~kb_angular", 0.2)
 
         self.dist_range_min = rospy.get_param("~dist_range_min", 0.3)
-        self.dist_range_max = rospy.get_param("~dist_range_max", 2.5)
+        self.dist_range_max = rospy.get_param("~dist_range_max", 1.9)
 
         self.dist_stuck_resume_max = rospy.get_param("~dist_stuck_resume_max", 1.0)
 
@@ -342,6 +346,14 @@ class SimpleFollower:
         self.period_stuck = np.random.randint(self.period_stuck_min, self.period_stuck_max)
         self.sys_msg_pub.publish("start time: " + str(self.t_following_start) + "period: " + str(self.period_stuck))
 
+    def set_to_follow(self):
+        self.state = "Follow"
+        self.set_stuck_param()
+
+        # pause too fast check for 0.5s
+        self.flag_too_fast_check_pause = True
+        self.too_fast_pause_count = 0
+
     # state functions
     def idle(self):
         # check for start message
@@ -353,8 +365,7 @@ class SimpleFollower:
                 self.sys_msg_pub.publish("Cannot start following! Human not found!")
             else:
                 # set to state follow
-                self.state = "Follow"
-                self.set_stuck_param()
+                self.set_to_follow()
         elif self.set_state == 4:
             # directly to go state teleop
             self.state = "Teleop"
@@ -383,11 +394,17 @@ class SimpleFollower:
         else:
             self.lost_vision_count = 0
 
+        # check if pause too fast check
+        if self.flag_too_fast_check_pause:
+            self.too_fast_pause_count += 1
+            if self.too_fast_pause_count >= self.too_fast_pause_count_limit:
+                self.flag_too_fast_check_pause = False
+
         # check if human is walking too fast
-        if np.abs(self.cmd_vel.linear.x) > self.too_fast_threshold_high:
+        if not self.flag_too_fast_check_pause and np.abs(self.cmd_vel.linear.x) > self.too_fast_threshold_high:
             self.too_fast_count += 1
             if self.too_fast_count == self.too_fast_count_limit_low:
-                if self.follower_mode == 2:
+                if (self.stuck_mode & 0x01) != 0 and self.follower_mode == 2:
                     # send haptic signal
                     self.send_haptic_msg(1, 2, 0.5, 0.5)
 
@@ -476,12 +493,13 @@ class SimpleFollower:
             # has to be set to follow manually
             if self.set_state == 1:
                 if self.track_status == "Find":
-                    rospy.logwarn('Prepare to switch to follow')
                     self.sys_msg_pub.publish("Prepare to switch to follow")
                     if self.dist_range_min < self.human_pose.y < self.dist_range_max:
                         self.set_state = -1
-                        self.state = "Follow"
-                        self.set_stuck_param()
+                        self.set_to_follow()
+                    else:
+                        # clear the set state message
+                        self.set_state = -1
 
         # do teleoperation
         if self.follower_mode == 2:
