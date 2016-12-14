@@ -160,6 +160,18 @@ void ExpMainWindow::robot_state_callback(const std_msgs::Int8::ConstPtr &state_m
         ui->label_robot_state->setText("Teleoperation");
         ui->label_robot_state->setStyleSheet("QLabel { background-color : white; color : black; }");
         break;
+    case 7:
+        ui->label_robot_state->setText("Pre-turning...");
+        ui->label_robot_state->setStyleSheet("QLabel { background-color : blue; color : black; }");
+        break;
+    case 8:
+        ui->label_robot_state->setText("Stopping...");
+        ui->label_robot_state->setStyleSheet("QLabel { background-color : blue; color : black; }");
+        break;
+    case 9:
+        ui->label_robot_state->setText("Turning...");
+        ui->label_robot_state->setStyleSheet("QLabel { background-color : blue; color : black; }");
+        break;
     }
 }
 
@@ -434,8 +446,8 @@ void ExpMainWindow::on_button_start_condition_clicked()
     // open file to save data and set data saving flag to be true
     this->file_count ++;
     char file_name[50];
-    std::sprintf(file_name, "%s/test%d_cond%d_%d.txt", this->data_file_path.c_str(),
-                 this->file_count, this->set_condition, this->set_stuck_mode);
+    std::sprintf(file_name, "%s/test%d_cond%d.txt", this->data_file_path.c_str(),
+                 this->file_count, this->set_condition);
 
     this->data_file.open(file_name);
     this->flag_start_data_saving = true;

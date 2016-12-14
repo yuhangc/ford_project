@@ -43,11 +43,16 @@ class VelocitySmoother:
         self.vel_goal.angular.z = self.cap_velocity(self.vel_goal.angular.z, self.vel_cap_rot)
 
     def update_vel(self):
+        # publish the new velocity
+        self.cmd_vel_pub.publish(self.vel_now)
+
         # do nothing if goal is reached
         flag_vel_lin = np.abs(self.vel_goal.linear.x - self.vel_now.linear.x) < self.vel_tol_lin
         flag_vel_rot = np.abs(self.vel_goal.angular.z - self.vel_now.angular.z) < self.vel_tol_rot
 
         if flag_vel_lin and flag_vel_rot:
+            self.vel_now.linear.x = self.vel_goal.linear.x
+            self.vel_now.angular.z = self.vel_goal.angular.z
             return
 
         # update the current velocity
@@ -55,9 +60,6 @@ class VelocitySmoother:
                                                    self.max_inc_lin)
         self.vel_now.angular.z += self.cap_velocity(self.vel_goal.angular.z - self.vel_now.angular.z,
                                                     self.max_inc_rot)
-
-        # publish the new velocity
-        self.cmd_vel_pub.publish(self.vel_now)
 
 if __name__ == "__main__":
     # initialize node

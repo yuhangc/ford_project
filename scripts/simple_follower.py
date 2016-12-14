@@ -22,7 +22,10 @@ states_all = {0: "Idle",
               3: "StuckObstacle",
               4: "StuckSoftware",
               5: "StuckTooFast",
-              6: "Teleop"}  # teleop state is only for testing
+              6: "Teleop",
+              7: "PreTurning",
+              8: "PreTurningSlowDown",
+              9: "Turning"}  # teleop state is only for testing
 
 cmd_states_all = {0: "Idle",
                   1: "SendOnce",
@@ -73,6 +76,7 @@ class SimpleFollower:
         self.too_fast_pause_count_limit = rospy.get_param("~too_fast_pause_count_limit", 65)
         self.slow_down_count_limit = rospy.get_param("~slow_down_count_limit", 25)
         self.turtlebot_vel_max = rospy.get_param("~turtlebot_vel_max", 0.7)
+        self.turtlebot_angvel_max = rospy.get_param("~turtlebot_angvel_max", np.pi)
 
         # a little bit of hysteresis
         self.too_fast_threshold_low = rospy.get_param("~too_fast_threshold_low", self.turtlebot_vel_max * 1.4)
@@ -122,27 +126,30 @@ class SimpleFollower:
         self.dist_stuck_resume_max = rospy.get_param("~dist_stuck_resume_max", 1.0)
 
         # variables for tilt control
-        self.roll_to_linear_scale = rospy.get_param("~roll_to_linear_scale", -  1.0)
-        self.pitch_to_angular_scale = rospy.get_param("~pitch_to_angular_scale", -2.0)
+        self.pitch_to_linear_scale = rospy.get_param("~roll_to_linear_scale", 1.0)
+        self.roll_to_angular_scale = rospy.get_param("~pitch_to_angular_scale", -2.0)
         self.pitch_deadband = rospy.get_param("~pitch_deadband", 0.2)
         self.roll_deadband = rospy.get_param("~roll_deadband", 0.2)
         self.pitch_offset = rospy.get_param("~pitch_offset", 0.15)
         self.roll_offset = rospy.get_param("~roll_offset", 0.1)
-        self.roll_center_offset = rospy.get_param("~roll_center_offset", -0.05)
-        self.pitch_center_offset = rospy.get_param("~pitch_center_offset", -0.1)
+        self.roll_center_offset = rospy.get_param("~roll_center_offset", 0.0)
+        self.pitch_center_offset = rospy.get_param("~pitch_center_offset", 0.0)
         self.flag_reverse_mapping = rospy.get_param("~reverse_mapping", False)
 
         # randomization parameter for "get stuck"
         # stuck mode - 0: no software stuck, 1 - too fast stuck, 2 - random stuck, 3 - both
         self.stuck_mode = rospy.get_param("~stuck_mode", 0)
-        self.num_stuck_total = rospy.get_param("~number_get_stuck_total", 5)
-        self.period_stuck_min = rospy.get_param("~period_stuck_min", 20)
-        self.period_stuck_max = rospy.get_param("~period_stuck_max", 40)
 
-        self.flag_soft_stuck = False
-        self.num_stuck = 0
-        self.t_following_start = 0.0
-        self.period_stuck = 0.0
+        # variables for the autonomous turning
+        self.measured_pose = Odometry()
+        self.pos_init_pre_turning = Pose2D()
+        self.dist_pre_turning = 0.0
+        self.angle_turning = np.pi / 2.0
+        self.angle_turning_goal = 0.0
+        self.tilt_turning_thresh = 0.75
+
+        # turning direction, 0 - no turning, 1 - turning left, 2 - turning right
+        self.dir_turning = 0
 
         # subscribers to human tracking
         self.human_pose_sub = rospy.Subscriber("tracking/human_pos2d",
@@ -258,6 +265,7 @@ class SimpleFollower:
 
     def odom_cb(self, msg):
         self.measured_vel = msg.twist.twist
+        self.measured_pose = msg
 
     def bumper_event_cb(self, bumper_event_msg):
         self.bumper_event = bumper_event_msg
@@ -338,17 +346,8 @@ class SimpleFollower:
             self.send_vel_cmd(0, 0)
             self.state = "Teleop"
 
-    def set_stuck_param(self):
-        if (self.stuck_mode & 0x02) == 0:
-            return
-
-        self.t_following_start = rospy.get_time()
-        self.period_stuck = np.random.randint(self.period_stuck_min, self.period_stuck_max)
-        self.sys_msg_pub.publish("start time: " + str(self.t_following_start) + "period: " + str(self.period_stuck))
-
     def set_to_follow(self):
         self.state = "Follow"
-        self.set_stuck_param()
 
         # pause too fast check for 0.5s
         self.flag_too_fast_check_pause = True
@@ -371,8 +370,6 @@ class SimpleFollower:
             self.state = "Teleop"
 
     def follow(self):
-        # update time following
-        self.dt_following = rospy.get_time() - self.t_following_start
         # check if need to switch state
         if self.track_status == "Lost":
             self.lost_vision_count += 1
@@ -380,9 +377,6 @@ class SimpleFollower:
                 if self.follower_mode == 2:
                     # send haptic signal
                     self.send_haptic_msg(-1, 3, -1, 1.0)
-
-                # update stuck timer
-                self.period_stuck -= self.dt_following
 
                 # set robot to stop and go to state lost vision
                 self.lost_vision_count = 0
@@ -404,43 +398,16 @@ class SimpleFollower:
         if not self.flag_too_fast_check_pause and np.abs(self.cmd_vel.linear.x) > self.too_fast_threshold_high:
             self.too_fast_count += 1
             if self.too_fast_count == self.too_fast_count_limit_low:
-                if (self.stuck_mode & 0x01) != 0 and self.follower_mode == 2:
+                if self.follower_mode == 2:
                     # send haptic signal
                     self.send_haptic_msg(1, 2, 0.5, 0.5)
 
                 self.sys_msg_pub.publish("Human walking too fast!")
-
-            if (self.stuck_mode & 0x01) != 0 and self.too_fast_count >= self.too_fast_count_limit_high:
-                # force the robot to "stuck" since human is walking too fast
-                self.too_fast_count = 0
-                self.send_vel_cmd(0.0, 0.0)
-
-                self.state = "StuckTooFast"
-                self.flag_soft_stuck = True
-                self.sys_msg_pub.publish("Robot stuck (human too fast)!")
-                return
         elif np.abs(self.cmd_vel.linear.x) <= self.too_fast_threshold_low:
             self.slow_down_count += 1
             if self.slow_down_count >= self.slow_down_count_limit:
                 self.too_fast_count = 0
                 self.slow_down_count = 0
-
-        # check for "stuck" set by software
-        if (self.stuck_mode & 0x02) != 0:
-            # use software to simulate stuck
-            if self.dt_following > self.period_stuck:
-                self.num_stuck += 1
-
-                # send haptic signal
-                if self.follower_mode == 2:
-                    self.send_haptic_msg(-1, 3, 1.0, 1.0)
-
-                self.send_vel_cmd(0.0, 0.0)
-
-                self.state = "StuckSoftware"
-                self.flag_soft_stuck = True
-                self.sys_msg_pub.publish("Robot stuck (software)!")
-                return
 
         # check for real stuck
         if self.bumper_event.state == BumperEvent.PRESSED:
@@ -458,6 +425,44 @@ class SimpleFollower:
                 return
         else:
             self.stuck_count = 0
+
+        # check for turning command
+        if self.follower_mode == 2 and self.flag_button_pressed and \
+                np.abs(self.human_input_tilt.x) > self.tilt_turning_thresh:
+            # record current position
+            self.pos_init_pre_turning.x = self.measured_pose.pose.pose.position.x
+            self.pos_init_pre_turning.y = self.measured_pose.pose.pose.position.y
+            self.pos_init_pre_turning.theta = 2.0 * np.arctan2(self.measured_pose.pose.pose.orientation.z,
+                                                               self.measured_pose.pose.pose.orientation.w)
+
+            # set turning direction
+            if self.human_input_tilt.x > 0:
+                self.dir_turning = 2    # turning right
+                self.angle_turning_goal = self.pos_init_pre_turning.theta - (self.angle_turning - 0.2)
+            else:
+                self.dir_turning = 1    # turning left
+                self.angle_turning_goal = self.pos_init_pre_turning.theta + (self.angle_turning - 0.2)
+
+            # set goal to appropriate range
+            if self.angle_turning_goal >= np.pi:
+                self.angle_turning_goal -= 2.0 * np.pi
+            elif self.angle_turning_goal < -np.pi:
+                self.angle_turning_goal += 2.0 * np.pi
+
+            # set distance for pre-turning
+            # - 0.05 accounts for the distance travelled when the robot slows down to stop
+            self.dist_pre_turning = self.human_pose.y - 0.00
+
+            # set robot speed to max
+            self.send_vel_cmd(self.turtlebot_vel_max * 0.9, 0)
+
+            # send a haptic cue
+            self.send_haptic_msg(0, 2, 0.5, 0.5)
+
+            # set state to pre-turning
+            self.state = "PreTurning"
+            self.sys_msg_pub.publish("Robot enter pre turning...")
+            return
 
         self.check_set_state()
 
@@ -477,7 +482,6 @@ class SimpleFollower:
             if self.dist_range_min < self.human_pose.y < self.dist_range_max:
                 # go back to following
                 self.state = "Follow"
-                self.t_following_start = rospy.get_time()
 
         # do teleop
         if self.follower_mode == 2:
@@ -487,7 +491,7 @@ class SimpleFollower:
 
     def stuck(self):
         # backup and try to follow again
-        if not self.flag_soft_stuck and self.stuck_backup_count < self.stuck_backup_count_limit:
+        if self.stuck_backup_count < self.stuck_backup_count_limit:
             self.stuck_backup_count += 1
         else:
             # has to be set to follow manually
@@ -507,6 +511,73 @@ class SimpleFollower:
         else:
             self.check_set_state()
 
+    def pre_turning(self):
+        # check if reached the desired distance
+        dx = self.measured_pose.pose.pose.position.x - self.pos_init_pre_turning.x
+        dy = self.measured_pose.pose.pose.position.y - self.pos_init_pre_turning.y
+        ddist = np.sqrt(dx**2 + dy**2)
+
+        # set robot speed to max
+        # self.send_vel_cmd(self.turtlebot_vel_max * 0.5, 0)
+
+        if ddist >= self.dist_pre_turning:
+            # prepare to switch to slow down
+            self.send_vel_cmd(0, 0)
+            self.state = "PreTurningSlowDown"
+            self.sys_msg_pub.publish("Prepare to stop for turning")
+
+    def pre_turning_slowdown(self):
+        # check if velocity is close to 0
+        if np.abs(self.measured_vel.linear.x) < 0.05:
+            # switch to turning
+            if self.dir_turning == 1:
+                self.send_vel_cmd(0, self.turtlebot_angvel_max * 0.8)
+            else:
+                self.send_vel_cmd(0, -self.turtlebot_angvel_max * 0.8)
+            self.state = "Turning"
+            self.sys_msg_pub.publish("Prepare to start turning")
+
+    def turning(self):
+        # check if getting to desired orientation
+        theta = 2.0 * np.arctan2(self.measured_pose.pose.pose.orientation.z,
+                                 self.measured_pose.pose.pose.orientation.w)
+        dtheta = theta - self.angle_turning_goal
+
+        # convert dtheta to [-pi, pi)
+        if dtheta >= np.pi:
+            dtheta -= 2 * np.pi
+        elif dtheta < -np.pi:
+            dtheta += 2 * np.pi
+
+        # rospy.logwarn("y: %f,  theta0, %f,  goal: %f,  theta: %f,  dtheta: %f\n",
+        #               self.measured_pose.pose.pose.orientation.z, self.pos_init_pre_turning.theta,
+        #               self.angle_turning_goal, theta, dtheta)
+
+        if np.abs(dtheta) < 0.12:
+            # tell the robot to stop first
+            self.send_vel_cmd(0, 0)
+
+            # check if human is in the filed of view and in proper range
+            if self.track_status == "Find" and self.dist_range_min < self.human_pose.y < self.dist_range_max:
+                # switch to follow
+                self.set_state = -1
+                self.set_to_follow()
+
+                # send a haptic cue
+                self.send_haptic_msg(0, 2, 0.5, 0.5)
+
+                # publish to system message
+                self.sys_msg_pub.publish("Robot started following!")
+            else:
+                # swith to stuck lost vision
+                self.state = "LostVision"
+
+                # send haptic cue
+                self.send_haptic_msg(1, 3, 1, 1)
+
+                # publish system message
+                self.sys_msg_pub.publish("Robot lost vision of human!")
+
     def teleop(self):
         # rospy.loginfo("in teleoperation")
         if self.follower_mode != 0:
@@ -514,33 +585,26 @@ class SimpleFollower:
             self.check_set_state()
 
         if self.flag_button_pressed:
-            if self.flag_latch_cmd_vel:
-                if self.human_input_tilt.x > self.roll_deadband and self.tele_vel.linear.x < self.turtlebot_vel_max:
-                    self.tele_vel.linear.x += self.tele_vel_inc_linear
-                elif self.human_input_tilt.x < -self.roll_deadband and self.tele_vel.linear.x > -self.turtlebot_vel_max:
-                    self.tele_vel.linear.x -= self.tele_vel_inc_linear
-                vx = self.tele_vel.linear.x
+            if self.human_input_tilt.x > self.roll_deadband:
+                omg = self.roll_to_angular_scale * (self.human_input_tilt.x - self.roll_offset)
+            elif self.human_input_tilt.x < -self.roll_deadband:
+                omg = self.roll_to_angular_scale * (self.human_input_tilt.x + self.roll_offset)
             else:
-                if self.human_input_tilt.x > self.roll_deadband:
-                    vx = self.roll_to_linear_scale * (self.human_input_tilt.x - self.roll_offset)
-                elif self.human_input_tilt.x < -self.roll_deadband:
-                    vx = self.roll_to_linear_scale * (self.human_input_tilt.x + self.roll_offset)
-                else:
-                    vx = 0
+                omg = 0
 
             if self.human_input_tilt.y > self.pitch_deadband:
-                self.tele_vel.angular.z = self.pitch_to_angular_scale * (self.human_input_tilt.y - self.pitch_offset)
+                vx = self.pitch_to_linear_scale * (self.human_input_tilt.y - self.pitch_offset)
             elif self.human_input_tilt.y < -self.pitch_deadband:
-                self.tele_vel.angular.z = self.pitch_to_angular_scale * (self.human_input_tilt.y + self.pitch_offset)
+                vx = self.pitch_to_linear_scale * (self.human_input_tilt.y + self.pitch_offset)
             else:
-                self.tele_vel.angular.z = 0
+                vx = 0
 
             # reverse mapping if necessary
             if self.flag_reverse_mapping:
                 vx = -vx
-                self.tele_vel.angular.z = -self.tele_vel.angular.z
+                omg = -omg
 
-            self.send_vel_cmd(vx, self.tele_vel.angular.z)
+            self.send_vel_cmd(vx, omg)
         else:
             self.send_vel_cmd(0, 0)
 
@@ -569,6 +633,15 @@ class SimpleFollower:
         elif self.state == "Teleop":
             self.teleop()
             current_state.data = 6
+        elif self.state == "PreTurning":
+            self.pre_turning()
+            current_state.data = 7
+        elif self.state == "PreTurningSlowDown":
+            self.pre_turning_slowdown()
+            current_state.data = 8
+        elif self.state == "Turning":
+            self.turning()
+            current_state.data = 9
         else:
             rospy.logerr("Unknown state!")
 
@@ -591,6 +664,12 @@ class SimpleFollower:
                 self.vision_led.set_color(name="purple")
             elif self.state == "Teleop":
                 self.vision_led.set_color(name="blue")
+            elif self.state == "PreTurning":
+                self.vision_led.set_color(name="blue")
+            elif self.state == "PreTurningSlowDown":
+                self.vision_led.set_color(name="pink")
+            elif self.state == "Turning":
+                self.vision_led.set_color(name="orange")
 
         self.state_last = self.state
 
