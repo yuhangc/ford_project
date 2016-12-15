@@ -49,7 +49,8 @@ class SimpleFollower:
         # 0 - Teleoperation
         # 1 - Autonomous
         # 2 - Haptic Tether
-        self.follower_mode = 2
+        # 3 - Training
+        self.follower_mode = 3
 
         # timer for state machine
         self.cmd_state_timer = rospy.get_time()
@@ -299,9 +300,6 @@ class SimpleFollower:
         if phi < 0:
             phi += 2 * np.pi
 
-        self.sys_msg_pub.publish("(" + str(x_r) + ", " + str(y_r) + ")    " + str(phi))
-        rospy.logwarn("(%f, %f),   %f", x_r, y_r, phi)
-
         # if specified direction and render time
         if dir != -1:
             new_msg.direction = dir
@@ -370,13 +368,13 @@ class SimpleFollower:
             self.state = "Teleop"
 
     def follow(self):
-        # check if need to switch state
+        # check if lost vision
         if self.track_status == "Lost":
             self.lost_vision_count += 1
             if self.lost_vision_count >= self.lost_vision_count_limit:
-                if self.follower_mode == 2:
-                    # send haptic signal
-                    self.send_haptic_msg(-1, 3, -1, 1.0)
+                # send haptic signal
+                if self.follower_mode == 2 or self.follower_mode == 3:
+                    self.send_haptic_msg(1, 2, 1.0, 1.0)
 
                 # set robot to stop and go to state lost vision
                 self.lost_vision_count = 0
@@ -397,10 +395,14 @@ class SimpleFollower:
         # check if human is walking too fast
         if not self.flag_too_fast_check_pause and np.abs(self.cmd_vel.linear.x) > self.too_fast_threshold_high:
             self.too_fast_count += 1
-            if self.too_fast_count == self.too_fast_count_limit_low:
-                if self.follower_mode == 2:
-                    # send haptic signal
-                    self.send_haptic_msg(1, 2, 0.5, 0.5)
+            if self.too_fast_count >= self.too_fast_count_limit_low:
+                # clear the too fast count
+                self.too_fast_count = 0
+                self.slow_down_count = 0
+
+                # only warn user in the training mode
+                if self.follower_mode == 3:
+                    self.send_haptic_msg(1, 2, 0.3, 0.3)
 
                 self.sys_msg_pub.publish("Human walking too fast!")
         elif np.abs(self.cmd_vel.linear.x) <= self.too_fast_threshold_low:
@@ -413,22 +415,21 @@ class SimpleFollower:
         if self.bumper_event.state == BumperEvent.PRESSED:
             self.stuck_count += 1
             if self.stuck_count >= self.stuck_count_limit:
-                if self.follower_mode == 2:
-                    # send haptic signal
-                    self.send_haptic_msg(-1, 3, 1.0, 1.0)
+                # send haptic signal
+                if self.follower_mode == 2 or self.follower_mode == 3:
+                    self.send_haptic_msg(1, 2, 1.0, 1.0)
 
                 self.stuck_backup_count = 0
                 self.send_vel_cmd(-0.5, 0, 1.0)
                 self.state = "StuckObstacle"
-                # rospy.logwarn("Robot stuck!")
                 self.sys_msg_pub.publish("Robot stuck!")
                 return
         else:
             self.stuck_count = 0
 
         # check for turning command
-        if self.follower_mode == 2 and self.flag_button_pressed and \
-                np.abs(self.human_input_tilt.x) > self.tilt_turning_thresh:
+        if (self.follower_mode == 2 or self.follower_mode == 3) and \
+                self.flag_button_pressed and np.abs(self.human_input_tilt.x) > self.tilt_turning_thresh:
             # record current position
             self.pos_init_pre_turning.x = self.measured_pose.pose.pose.position.x
             self.pos_init_pre_turning.y = self.measured_pose.pose.pose.position.y
@@ -451,13 +452,16 @@ class SimpleFollower:
 
             # set distance for pre-turning
             # - 0.05 accounts for the distance travelled when the robot slows down to stop
-            self.dist_pre_turning = self.human_pose.y - 0.00
+            self.dist_pre_turning = self.human_pose.y + 0.10
 
             # set robot speed to max
             self.send_vel_cmd(self.turtlebot_vel_max * 0.9, 0)
 
             # send a haptic cue
-            self.send_haptic_msg(0, 2, 0.5, 0.5)
+            if self.dir_turning == 1:
+                self.send_haptic_msg(2, 2, 0.3, 0.3)
+            else:
+                self.send_haptic_msg(3, 2, 0.3, 0.3)
 
             # set state to pre-turning
             self.state = "PreTurning"
@@ -484,7 +488,7 @@ class SimpleFollower:
                 self.state = "Follow"
 
         # do teleop
-        if self.follower_mode == 2:
+        if self.follower_mode == 2 or self.follower_mode == 3:
             self.teleop()
         else:
             self.check_set_state()
@@ -506,7 +510,7 @@ class SimpleFollower:
                         self.set_state = -1
 
         # do teleoperation
-        if self.follower_mode == 2:
+        if self.follower_mode == 2 or self.follower_mode == 3:
             self.teleop()
         else:
             self.check_set_state()
@@ -521,21 +525,14 @@ class SimpleFollower:
         # self.send_vel_cmd(self.turtlebot_vel_max * 0.5, 0)
 
         if ddist >= self.dist_pre_turning:
-            # prepare to switch to slow down
-            self.send_vel_cmd(0, 0)
-            self.state = "PreTurningSlowDown"
-            self.sys_msg_pub.publish("Prepare to stop for turning")
-
-    def pre_turning_slowdown(self):
-        # check if velocity is close to 0
-        if np.abs(self.measured_vel.linear.x) < 0.05:
-            # switch to turning
+            # directly go to turning state
             if self.dir_turning == 1:
-                self.send_vel_cmd(0, self.turtlebot_angvel_max * 0.8)
+                self.send_vel_cmd(self.turtlebot_vel_max * 0.8, self.turtlebot_angvel_max * 0.73)
             else:
-                self.send_vel_cmd(0, -self.turtlebot_angvel_max * 0.8)
+                self.send_vel_cmd(self.turtlebot_vel_max * 0.8, -self.turtlebot_angvel_max * 0.73)
+
             self.state = "Turning"
-            self.sys_msg_pub.publish("Prepare to start turning")
+            self.sys_msg_pub.publish("Prepare to turn")
 
     def turning(self):
         # check if getting to desired orientation
@@ -636,9 +633,6 @@ class SimpleFollower:
         elif self.state == "PreTurning":
             self.pre_turning()
             current_state.data = 7
-        elif self.state == "PreTurningSlowDown":
-            self.pre_turning_slowdown()
-            current_state.data = 8
         elif self.state == "Turning":
             self.turning()
             current_state.data = 9
@@ -666,10 +660,8 @@ class SimpleFollower:
                 self.vision_led.set_color(name="blue")
             elif self.state == "PreTurning":
                 self.vision_led.set_color(name="blue")
-            elif self.state == "PreTurningSlowDown":
-                self.vision_led.set_color(name="pink")
             elif self.state == "Turning":
-                self.vision_led.set_color(name="orange")
+                self.vision_led.set_color(name="blue")
 
         self.state_last = self.state
 

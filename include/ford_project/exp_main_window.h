@@ -84,6 +84,9 @@ private:
     ford_project::haptic_msg haptic_signal;
     ford_project::haptic_msg haptic_signal_input;
 
+    // hand pose signal
+    geometry_msgs::Vector3 tilt_angles;
+
     // button data and event
     bool button_data;
     int button_event;

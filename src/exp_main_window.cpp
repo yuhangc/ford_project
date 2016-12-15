@@ -108,6 +108,9 @@ void ExpMainWindow::UpdateGUIInfo()
                            << ", " << this->robot_state
                            << ", " << this->button_data
                            << ", " << this->button_event
+                           << ", " << this->tilt_angles.x
+                           << ", " << this->tilt_angles.y
+                           << ", " << this->tilt_angles.z
                            << ", " << this->haptic_signal_input.amplitude
                            << ", " << unsigned(this->haptic_signal_input.direction)
                            << ", " << unsigned(this->haptic_signal_input.repetition)
@@ -247,6 +250,10 @@ void ExpMainWindow::imu_tilt_callback(const geometry_msgs::Vector3::ConstPtr &ti
     ui->lcd_tilt_roll->display(tilt_msg->x);
     ui->lcd_tilt_pitch->display(tilt_msg->y);
     ui->lcd_tilt_yaw->display(tilt_msg->z);
+
+    this->tilt_angles.x = tilt_msg->x;
+    this->tilt_angles.y = tilt_msg->y;
+    this->tilt_angles.z = tilt_msg->z;
 }
 
 // ============================================================================
