@@ -374,7 +374,7 @@ class SimpleFollower:
             if self.lost_vision_count >= self.lost_vision_count_limit:
                 # send haptic signal
                 if self.follower_mode == 2 or self.follower_mode == 3:
-                    self.send_haptic_msg(1, 2, 1.0, 1.0)
+                    self.send_haptic_msg(0, 2, 1.0, 1.0)
 
                 # set robot to stop and go to state lost vision
                 self.lost_vision_count = 0
@@ -402,7 +402,7 @@ class SimpleFollower:
 
                 # only warn user in the training mode
                 if self.follower_mode == 3:
-                    self.send_haptic_msg(1, 2, 0.3, 0.3)
+                    self.send_haptic_msg(0, 2, 0.3, 0.3)
 
                 self.sys_msg_pub.publish("Human walking too fast!")
         elif np.abs(self.cmd_vel.linear.x) <= self.too_fast_threshold_low:
@@ -417,7 +417,7 @@ class SimpleFollower:
             if self.stuck_count >= self.stuck_count_limit:
                 # send haptic signal
                 if self.follower_mode == 2 or self.follower_mode == 3:
-                    self.send_haptic_msg(1, 2, 1.0, 1.0)
+                    self.send_haptic_msg(0, 2, 1.0, 1.0)
 
                 self.stuck_backup_count = 0
                 self.send_vel_cmd(-0.5, 0, 1.0)
@@ -561,7 +561,7 @@ class SimpleFollower:
                 self.set_to_follow()
 
                 # send a haptic cue
-                self.send_haptic_msg(0, 2, 0.5, 0.5)
+                self.send_haptic_msg(1, 2, 0.5, 0.5)
 
                 # publish to system message
                 self.sys_msg_pub.publish("Robot started following!")
@@ -570,7 +570,7 @@ class SimpleFollower:
                 self.state = "LostVision"
 
                 # send haptic cue
-                self.send_haptic_msg(1, 3, 1, 1)
+                self.send_haptic_msg(0, 3, 1, 1)
 
                 # publish system message
                 self.sys_msg_pub.publish("Robot lost vision of human!")

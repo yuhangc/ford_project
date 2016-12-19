@@ -25,7 +25,8 @@ public:
     ~VideoProcessor();
 
     // initialization
-    void init(std::string file_path);
+    void set_path(std::string file_path);
+    void init(int cond, int tar);
     void calibrate(std::string file_name);
     void get_path(std::string file_name);
     void close_all();
@@ -84,4 +85,7 @@ private:
     std::ofstream m_calibration_data;
     std::ofstream m_human_data;
     std::ofstream m_robot_data;
+
+    // folder path
+    std::string data_path;
 };

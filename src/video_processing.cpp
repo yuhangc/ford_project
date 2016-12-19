@@ -54,35 +54,32 @@ VideoProcessor::~VideoProcessor()
 }
 
 // ============================================================================
-void VideoProcessor::init(std::string file_path)
+void VideoProcessor::set_path(string file_path)
 {
-    // initialize the data save streams
-    std::string file_name = file_path;
-    file_name.append("/path_data.txt");
-    this->m_path_data.open(file_name);
+    this->data_path = file_path;
+}
 
-    file_name = file_path;
-    file_name.append("/calibration_data.txt");
-    this->m_calibration_data.open(file_name);
+// ============================================================================
+void VideoProcessor::init(int cond, int tar)
+{
+    std::string file_name = this->data_path + "/condition" + std::to_string(cond)
+            + "/target" + std::to_string(tar) + ".MP4";
+    // open the video
+    this->m_video_capture.open(file_name);
 
-    file_name = file_path;
-    file_name.append("/human_data.txt");
+    // open and create data files
+    file_name = this->data_path + "/condition" + std::to_string(cond)
+            + "/target" + std::to_string(tar) + "human.txt";
     this->m_human_data.open(file_name);
 
-    file_name = file_path;
-    file_name.append("/robot_data.txt");
+    file_name = this->data_path + "/condition" + std::to_string(cond)
+            + "/target" + std::to_string(tar) + "robot.txt";
     this->m_robot_data.open(file_name);
-
-    // open the video
-    file_name = file_path;
-    file_name.append("/cond1_no_haptics.MP4");
-    this->m_video_capture.open(file_name);
 }
 
 // ============================================================================
 void VideoProcessor::close_all()
 {
-    this->m_path_data.close();
     this->m_robot_data.close();
     this->m_human_data.close();
 }
@@ -90,7 +87,13 @@ void VideoProcessor::close_all()
 // ============================================================================
 void VideoProcessor::calibrate(std::string file_name)
 {
-    this->m_image_input = cv::imread(file_name);
+    // create and open calibration file
+    std::string file_path = this->data_path;
+    file_path.append("/calibration_data.txt");
+    this->m_calibration_data.open(file_path);
+
+    // read in image
+    this->m_image_input = cv::imread(this->data_path + file_name);
 
     aruco::CameraParameters t_cam_param = this->m_cam_param;
 //    t_cam_param.CamSize = cv::Size(4000, 3000);
@@ -120,8 +123,7 @@ void VideoProcessor::calibrate(std::string file_name)
     cv::Mat t_display;
     cv::resize(t_output_image, t_display, cv::Size(), 0.3, 0.3);
     cv::imshow("test", t_display);
-    cv::waitKey(500);
-    std::getchar();
+    cv::waitKey(2000);
 
     // write the positions of each marker to file
     for (int i = 0; i < this->m_markers.size(); i++) {
@@ -133,12 +135,21 @@ void VideoProcessor::calibrate(std::string file_name)
                                  << this->m_markers[i].Rvec.at<float>(1, 0) << ",  "
                                  << this->m_markers[i].Rvec.at<float>(2, 0) << std::endl;
     }
+
+    // close the file
+    this->m_calibration_data.close();
 }
 
 // ============================================================================
 void VideoProcessor::get_path(std::string file_name)
 {
-    cv::Mat t_image_input = cv::imread(file_name);
+    // create and open data file
+    std::string file_path = this->data_path;
+    file_path.append("/path_data.txt");
+    this->m_path_data.open(file_path);
+
+    // read in image
+    cv::Mat t_image_input = cv::imread(this->data_path + file_name);
     cv::undistort(t_image_input, this->m_image_input, this->m_cam_param.CameraMatrix, this->m_cam_param.Distorsion);
 
     // color segmentation
@@ -160,8 +171,7 @@ void VideoProcessor::get_path(std::string file_name)
     cv::bitwise_and(this->m_image_input, this->m_image_input, t_mask, t_color_mask);
     cv::resize(t_mask, t_out_image, cv::Size(), 0.5, 0.5);
     cv::imshow("test", t_out_image);
-    cv::waitKey(500);
-    std::getchar();
+    cv::waitKey(2000);
 
     // record all non-zero coordinates in the mask
     cv::Mat non_zero_coords;
@@ -171,6 +181,9 @@ void VideoProcessor::get_path(std::string file_name)
         this->m_path_data << non_zero_coords.at<cv::Point>(i).x << ",  "
                           << non_zero_coords.at<cv::Point>(i).y << std::endl;
     }
+
+    // close the data file
+    this->m_path_data.close();
 }
 
 // ============================================================================
@@ -348,15 +361,20 @@ int main(int argc, char** argv)
 
     VideoProcessor video_processor;
 
-    video_processor.init("/home/yuhangche/Desktop/exp_video/user7");
-    video_processor.calibrate("/home/yuhangche/Desktop/exp_video/user7/calibration.JPG");
-    video_processor.get_path("/home/yuhangche/Desktop/exp_video/user7/calibration1.jpg");
+    video_processor.set_path("/home/yuhangche/Desktop/exp_video/pilot0");
+    video_processor.calibrate("/calibration.JPG");
+    video_processor.get_path("/calibration1.jpg");
 
-    while (video_processor.get_frame() && !ros::isShuttingDown()) {
-        video_processor.get_frame();
-        video_processor.get_human_pos();
-        video_processor.get_robot_pos();
+    // loop through all conditions and targets
+    for (int cond = 1; cond <= 2; cond++) {
+        for (int tar = 1; tar <= 4; tar++) {
+            video_processor.init(cond, tar);
+            while (video_processor.get_frame() && !ros::isShuttingDown()) {
+                video_processor.get_frame();
+                video_processor.get_human_pos();
+                video_processor.get_robot_pos();
+            }
+            video_processor.close_all();
+        }
     }
-
-    video_processor.close_all();
 }

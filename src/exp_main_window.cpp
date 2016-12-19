@@ -460,6 +460,9 @@ void ExpMainWindow::on_button_start_condition_clicked()
     this->flag_start_data_saving = true;
 
     this->time_start_data_saving = ros::Time().now().toSec();
+
+    // display message
+    ui->browser_sys_message->append(file_name);
 }
 
 // ============================================================================
