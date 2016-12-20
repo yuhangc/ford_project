@@ -70,7 +70,7 @@ class SimpleFollower:
         self.flag_too_fast_check_pause = False
 
         self.stuck_backup_count_limit = 50
-        self.stuck_count_limit = rospy.get_param("~stuck_count_limit", 25)
+        self.stuck_count_limit = rospy.get_param("~stuck_count_limit", 20)
         self.lost_vision_count_limit = rospy.get_param("~lost_vision_count_limit", 25)
         self.too_fast_count_limit_low = rospy.get_param("~too_fast_count_limit_low", 25)
         self.too_fast_count_limit_high = rospy.get_param("~too_fast_count_limit_high", 45)
@@ -137,10 +137,6 @@ class SimpleFollower:
         self.pitch_center_offset = rospy.get_param("~pitch_center_offset", 0.0)
         self.flag_reverse_mapping = rospy.get_param("~reverse_mapping", False)
 
-        # randomization parameter for "get stuck"
-        # stuck mode - 0: no software stuck, 1 - too fast stuck, 2 - random stuck, 3 - both
-        self.stuck_mode = rospy.get_param("~stuck_mode", 0)
-
         # variables for the autonomous turning
         self.measured_pose = Odometry()
         self.pos_init_pre_turning = Pose2D()
@@ -184,10 +180,6 @@ class SimpleFollower:
         self.follower_mode_control_sub = rospy.Subscriber("state_control/set_follower_mode",
                                                           Int8, self.follower_mode_control_cb)
 
-        # subscriber to "stuck mode" control
-        self.stuck_mode_control_sub = rospy.Subscriber("state_control/set_stuck_mode",
-                                                       Int8, self.stuck_mode_control_cb)
-
         # subscribe to the bumper event
         self.bumper_event_sub = rospy.Subscriber("mobile_base/events/bumper",
                                                  BumperEvent, self.bumper_event_cb)
@@ -207,10 +199,6 @@ class SimpleFollower:
     # call back functions
     def follower_mode_control_cb(self, follower_mode_control_msg):            
         self.follower_mode = follower_mode_control_msg.data
-
-    def stuck_mode_control_cb(self, stuck_mode_control_msg):
-        self.stuck_mode = stuck_mode_control_msg.data
-        self.sys_msg_pub.publish("switch to stuck mode " + str(self.stuck_mode))
 
     def human_track_pose_cb(self, msg):
         self.human_pose = msg
@@ -238,7 +226,7 @@ class SimpleFollower:
 
     def button_event_cb(self, msg):
         if msg.data == 2:
-            if self.state == "Follow":
+            if self.state == "Follow" or self.state == "PreTurning" or self.state == "Turning":
                 self.set_state = 0
             else:
                 self.set_state = 1
@@ -351,6 +339,23 @@ class SimpleFollower:
         self.flag_too_fast_check_pause = True
         self.too_fast_pause_count = 0
 
+    def check_for_stuck(self):
+        # check for real stuck
+        if self.bumper_event.state == BumperEvent.PRESSED:
+            self.stuck_count += 1
+            if self.stuck_count >= self.stuck_count_limit:
+                # send haptic signal
+                if self.follower_mode == 2 or self.follower_mode == 3:
+                    self.send_haptic_msg(0, 2, 1.0, 1.0)
+
+                self.stuck_backup_count = 0
+                self.send_vel_cmd(-0.5, 0, 1.0)
+                self.state = "StuckObstacle"
+                self.sys_msg_pub.publish("Robot stuck!")
+                return
+        else:
+            self.stuck_count = 0
+
     # state functions
     def idle(self):
         # check for start message
@@ -411,21 +416,7 @@ class SimpleFollower:
                 self.too_fast_count = 0
                 self.slow_down_count = 0
 
-        # check for real stuck
-        if self.bumper_event.state == BumperEvent.PRESSED:
-            self.stuck_count += 1
-            if self.stuck_count >= self.stuck_count_limit:
-                # send haptic signal
-                if self.follower_mode == 2 or self.follower_mode == 3:
-                    self.send_haptic_msg(0, 2, 1.0, 1.0)
-
-                self.stuck_backup_count = 0
-                self.send_vel_cmd(-0.5, 0, 1.0)
-                self.state = "StuckObstacle"
-                self.sys_msg_pub.publish("Robot stuck!")
-                return
-        else:
-            self.stuck_count = 0
+        self.check_for_stuck()
 
         # check for turning command
         if (self.follower_mode == 2 or self.follower_mode == 3) and \
@@ -516,6 +507,12 @@ class SimpleFollower:
             self.check_set_state()
 
     def pre_turning(self):
+        # check for stuck
+        self.check_for_stuck()
+
+        # check for human interrupt
+        self.check_set_state()
+
         # check if reached the desired distance
         dx = self.measured_pose.pose.pose.position.x - self.pos_init_pre_turning.x
         dy = self.measured_pose.pose.pose.position.y - self.pos_init_pre_turning.y
@@ -535,6 +532,12 @@ class SimpleFollower:
             self.sys_msg_pub.publish("Prepare to turn")
 
     def turning(self):
+        # check for stuck
+        self.check_for_stuck()
+
+        # check for human interrupt
+        self.check_set_state()
+
         # check if getting to desired orientation
         theta = 2.0 * np.arctan2(self.measured_pose.pose.pose.orientation.z,
                                  self.measured_pose.pose.pose.orientation.w)
