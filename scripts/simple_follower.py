@@ -226,9 +226,11 @@ class SimpleFollower:
 
     def button_event_cb(self, msg):
         if msg.data == 2:
-            if self.state == "Follow" or self.state == "PreTurning" or self.state == "Turning":
-                self.set_state = 0
+            if self.state == "Follow":
+                # set to teleoperation if in following mode
+                self.set_state = 4
             else:
+                # set to follow if in teleoperation/idle mode
                 self.set_state = 1
 
     def human_input_mode_cb(self, msg):
@@ -324,20 +326,23 @@ class SimpleFollower:
     def check_set_state(self):
         # check if state has been set to idle or teleop manually
         if self.set_state == 0:
-            self.set_state = -1
             self.send_vel_cmd(0, 0)
             self.state = "Idle"
-        elif self.set_state == 4:
-            self.set_state = -1
+        elif self.set_state == 4 and self.follower_mode != 1:
             self.send_vel_cmd(0, 0)
             self.state = "Teleop"
+        elif self.set_state == 1:
+            self.set_to_follow()
+
+        self.set_state = -1
 
     def set_to_follow(self):
-        self.state = "Follow"
-
-        # pause too fast check for 0.5s
-        self.flag_too_fast_check_pause = True
-        self.too_fast_pause_count = 0
+        # check if already have human in vision
+        if self.track_status == "Find" and self.dist_range_min < self.human_pose.y < self.dist_range_max:
+            # set to state follow
+            self.state = "Follow"
+        else:
+            self.sys_msg_pub.publish("Cannot start following! Human not found!")
 
     def check_for_stuck(self):
         # check for real stuck
@@ -346,7 +351,7 @@ class SimpleFollower:
             if self.stuck_count >= self.stuck_count_limit:
                 # send haptic signal
                 if self.follower_mode == 2 or self.follower_mode == 3:
-                    self.send_haptic_msg(0, 2, 1.0, 1.0)
+                    self.send_haptic_msg(-1, 2, 1.0, 1.0)
 
                 self.stuck_backup_count = 0
                 self.send_vel_cmd(-0.5, 0, 1.0)
@@ -358,19 +363,8 @@ class SimpleFollower:
 
     # state functions
     def idle(self):
-        # check for start message
-        if self.set_state == 1:
-            self.set_state = -1
-            # check if already have human in vision
-            if self.track_status == "Lost":
-                rospy.logwarn("Cannot start following! Human not found!")
-                self.sys_msg_pub.publish("Cannot start following! Human not found!")
-            else:
-                # set to state follow
-                self.set_to_follow()
-        elif self.set_state == 4:
-            # directly to go state teleop
-            self.state = "Teleop"
+        # check for set state
+        self.check_set_state()
 
     def follow(self):
         # check if lost vision
@@ -379,7 +373,7 @@ class SimpleFollower:
             if self.lost_vision_count >= self.lost_vision_count_limit:
                 # send haptic signal
                 if self.follower_mode == 2 or self.follower_mode == 3:
-                    self.send_haptic_msg(0, 2, 1.0, 1.0)
+                    self.send_haptic_msg(-1, 2, 1.0, 1.0)
 
                 # set robot to stop and go to state lost vision
                 self.lost_vision_count = 0
@@ -417,47 +411,6 @@ class SimpleFollower:
                 self.slow_down_count = 0
 
         self.check_for_stuck()
-
-        # check for turning command
-        if (self.follower_mode == 2 or self.follower_mode == 3) and \
-                self.flag_button_pressed and np.abs(self.human_input_tilt.x) > self.tilt_turning_thresh:
-            # record current position
-            self.pos_init_pre_turning.x = self.measured_pose.pose.pose.position.x
-            self.pos_init_pre_turning.y = self.measured_pose.pose.pose.position.y
-            self.pos_init_pre_turning.theta = 2.0 * np.arctan2(self.measured_pose.pose.pose.orientation.z,
-                                                               self.measured_pose.pose.pose.orientation.w)
-
-            # set turning direction
-            if self.human_input_tilt.x > 0:
-                self.dir_turning = 2    # turning right
-                self.angle_turning_goal = self.pos_init_pre_turning.theta - (self.angle_turning - 0.2)
-            else:
-                self.dir_turning = 1    # turning left
-                self.angle_turning_goal = self.pos_init_pre_turning.theta + (self.angle_turning - 0.2)
-
-            # set goal to appropriate range
-            if self.angle_turning_goal >= np.pi:
-                self.angle_turning_goal -= 2.0 * np.pi
-            elif self.angle_turning_goal < -np.pi:
-                self.angle_turning_goal += 2.0 * np.pi
-
-            # set distance for pre-turning
-            # - 0.05 accounts for the distance travelled when the robot slows down to stop
-            self.dist_pre_turning = self.human_pose.y + 0.10
-
-            # set robot speed to max
-            self.send_vel_cmd(self.turtlebot_vel_max * 0.9, 0)
-
-            # send a haptic cue
-            if self.dir_turning == 1:
-                self.send_haptic_msg(2, 2, 0.3, 0.3)
-            else:
-                self.send_haptic_msg(3, 2, 0.3, 0.3)
-
-            # set state to pre-turning
-            self.state = "PreTurning"
-            self.sys_msg_pub.publish("Robot enter pre turning...")
-            return
 
         self.check_set_state()
 
@@ -506,6 +459,7 @@ class SimpleFollower:
         else:
             self.check_set_state()
 
+    # deprecated mode
     def pre_turning(self):
         # check for stuck
         self.check_for_stuck()
@@ -531,6 +485,7 @@ class SimpleFollower:
             self.state = "Turning"
             self.sys_msg_pub.publish("Prepare to turn")
 
+    # deprecated mode
     def turning(self):
         # check for stuck
         self.check_for_stuck()
@@ -579,10 +534,8 @@ class SimpleFollower:
                 self.sys_msg_pub.publish("Robot lost vision of human!")
 
     def teleop(self):
-        # rospy.loginfo("in teleoperation")
-        if self.follower_mode != 0:
-            # do not switch to other states when in teleoperation condition
-            self.check_set_state()
+        # check for set state
+        self.check_set_state()
 
         if self.flag_button_pressed:
             if self.human_input_tilt.x > self.roll_deadband:

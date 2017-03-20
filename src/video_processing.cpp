@@ -62,18 +62,18 @@ void VideoProcessor::set_path(string file_path)
 // ============================================================================
 void VideoProcessor::init(int cond, int tar)
 {
-    std::string file_name = this->data_path + "/condition" + std::to_string(cond)
-            + "/target" + std::to_string(tar) + ".MP4";
+    std::string file_name = this->data_path + "/test" + std::to_string(cond)
+            + "/trial" + std::to_string(tar) + ".MP4";
     // open the video
     this->m_video_capture.open(file_name);
 
     // open and create data files
-    file_name = this->data_path + "/condition" + std::to_string(cond)
-            + "/target" + std::to_string(tar) + "human.txt";
+    file_name = this->data_path + "/test" + std::to_string(cond)
+            + "/trial" + std::to_string(tar) + "human.txt";
     this->m_human_data.open(file_name);
 
-    file_name = this->data_path + "/condition" + std::to_string(cond)
-            + "/target" + std::to_string(tar) + "robot.txt";
+    file_name = this->data_path + "/test" + std::to_string(cond)
+            + "/trial" + std::to_string(tar) + "robot.txt";
     this->m_robot_data.open(file_name);
 }
 
@@ -361,14 +361,15 @@ int main(int argc, char** argv)
 
     VideoProcessor video_processor;
 
-    video_processor.set_path("/home/yuhangche/Desktop/exp_video/pilot0");
+    video_processor.set_path("/home/yuhangche/Desktop/exp_video/user7");
     video_processor.calibrate("/calibration.JPG");
     video_processor.get_path("/calibration1.jpg");
 
     // loop through all conditions and targets
-    for (int cond = 1; cond <= 2; cond++) {
-        for (int tar = 1; tar <= 4; tar++) {
-            video_processor.init(cond, tar);
+    int trial_num[5] = {3, 10, 5, 5, 5};
+    for (int cond = 0; cond < 3; cond++) {
+        for (int tar = 1; tar <= trial_num[cond]; tar++) {
+            video_processor.init(cond+1, tar);
             while (video_processor.get_frame() && !ros::isShuttingDown()) {
                 video_processor.get_frame();
                 video_processor.get_human_pos();
